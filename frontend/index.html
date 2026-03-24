@@ -70,8 +70,8 @@ tailwind.config = {
     </div>
     <div class="flex items-center gap-3 text-xs">
       <select id="network-select" onchange="switchNetwork()" class="px-2 py-0.5 rounded text-[9px] font-mono text-body bg-warm border-none cursor-pointer">
-        <option value="studionet">Studionet</option>
         <option value="bradbury">Bradbury Testnet</option>
+        <option value="studionet">Studionet</option>
       </select>
       <span id="status-badge" class="px-2.5 py-1 rounded-full text-[10px] font-medium bg-warm text-body">Connecting</span>
       <a href="https://x.com/ecofrontiers" target="_blank" class="text-body hover:text-sage">
@@ -355,7 +355,7 @@ const NETWORKS = {
 // Deployer key for Bradbury (funded account — hackathon testnet only)
 const BRADBURY_DEPLOYER_KEY = '0xbb419bb04bc41c07f045cacb61f298f947212f4091ec421b3a701994b02a8e3a';
 
-let currentNetwork = 'studionet';
+let currentNetwork = 'bradbury';
 let client, map, markers = {};
 let lastTxHash = null;
 
