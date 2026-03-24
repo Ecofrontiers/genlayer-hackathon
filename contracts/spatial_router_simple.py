@@ -4,12 +4,24 @@ import json
 
 
 class SpatialRouterSimple(gl.Contract):
-    """Minimal test — no constructor args, no cross-contract calls."""
+    """Minimal routing — hardcoded zone data, no cross-contract calls."""
 
+    owner: Address
     routing_history: DynArray[str]
+
+    VALID_ZONES = {"FI", "DE", "US"}
+
+    @gl.public.write
+    def set_owner(self):
+        """Set owner on first call."""
+        if self.owner == Address(b'\x00' * 20):
+            self.owner = gl.message.sender_account
+        else:
+            assert gl.message.sender_account == self.owner, "Owner already set"
 
     @gl.public.write
     def route_simple(self, preferences: str) -> str:
+        assert len(preferences) < 1000, "Preferences too long"
         # Hardcoded zone data for testing
         zone_data = {
             "FI": {"carbon": 45, "renewable": 82},
@@ -28,7 +40,8 @@ class SpatialRouterSimple(gl.Contract):
                 return False
             try:
                 data = json.loads(leader_result.calldata)
-                return "zone" in data
+                return ("zone" in data and "reasoning" in data
+                        and data["zone"] in {"FI", "DE", "US"})
             except Exception:
                 return False
 

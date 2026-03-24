@@ -8,14 +8,24 @@ class GridOracle(gl.Contract):
     Fetches live carbon intensity and renewable % from multiple sources,
     reaches consensus via Optimistic Democracy with 5% tolerance."""
 
-    # Storage: zone_id -> energy metrics
+    owner: Address
     zone_carbon: TreeMap[str, u32]       # gCO2/kWh
     zone_renewable: TreeMap[str, u32]    # renewable %
     zone_intensity_index: TreeMap[str, str]  # "very low" / "low" / "moderate" / "high" / "very high"
-    last_updated: TreeMap[str, u32]      # block number of last update per zone
 
     def _get_zones(self):
-        return ["FI", "DE", "US"]
+        return ["FI", "DE", "US", "GB"]
+
+    def _only_owner(self):
+        assert gl.message.sender_account == self.owner, "Only owner can call this"
+
+    @gl.public.write
+    def set_owner(self):
+        """Set owner on first call (no constructor args on studionet)."""
+        if self.owner == Address(b'\x00' * 20):
+            self.owner = gl.message.sender_account
+        else:
+            assert gl.message.sender_account == self.owner, "Owner already set"
 
     @gl.public.write
     def update_zone_gb(self):
@@ -27,7 +37,7 @@ class GridOracle(gl.Contract):
             data = json.loads(response.body.decode("utf-8"))
             entry = data["data"][0]
             return {
-                "carbon": entry["intensity"]["actual"] or entry["intensity"]["forecast"],
+                "carbon": entry["intensity"]["actual"] if entry["intensity"]["actual"] is not None else entry["intensity"]["forecast"],
                 "index": entry["intensity"]["index"],
                 "zone": "GB"
             }
@@ -38,7 +48,7 @@ class GridOracle(gl.Contract):
             my_response = gl.nondet.web.get(api_url)
             my_data = json.loads(my_response.body.decode("utf-8"))
             my_entry = my_data["data"][0]
-            my_carbon = my_entry["intensity"]["actual"] or my_entry["intensity"]["forecast"]
+            my_carbon = my_entry["intensity"]["actual"] if my_entry["intensity"]["actual"] is not None else my_entry["intensity"]["forecast"]
             leader_carbon = leader_result.calldata["carbon"]
             if leader_carbon == 0:
                 return my_carbon == 0
@@ -47,6 +57,9 @@ class GridOracle(gl.Contract):
         result = gl.vm.run_nondet_unsafe(leader_fn, validator_fn)
         self.zone_carbon["GB"] = u32(result["carbon"])
         self.zone_intensity_index["GB"] = result["index"]
+        # UK API doesn't provide renewable %, estimate from intensity index
+        index_to_renewable = {"very low": 85, "low": 65, "moderate": 45, "high": 25, "very high": 10}
+        self.zone_renewable["GB"] = u32(index_to_renewable.get(result["index"], 40))
 
     @gl.public.write
     def update_zone_windfall(self, zone_id: str):
@@ -91,6 +104,7 @@ class GridOracle(gl.Contract):
     def update_zone_hardcoded(self, zone_id: str, carbon: u32, renewable: u32):
         """Fallback: manually set zone data for demo reliability.
         Use when APIs are unavailable or rate-limited during consensus."""
+        self._only_owner()
         self.zone_carbon[zone_id] = carbon
         self.zone_renewable[zone_id] = renewable
 

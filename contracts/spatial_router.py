@@ -6,16 +6,32 @@ import json
 class SpatialRouter(gl.Contract):
     """LLM-powered subjective inference routing with consensus verification."""
 
+    owner: Address
     grid_oracle_addr: Address
     routing_history: DynArray[str]
+
+    VALID_ZONES = {"FI", "DE", "US", "GB"}
+
+    @gl.public.write
+    def set_owner(self):
+        """Set owner on first call (no constructor args on studionet)."""
+        if self.owner == Address(b'\x00' * 20):
+            self.owner = gl.message.sender_account
+        else:
+            assert gl.message.sender_account == self.owner, "Owner already set"
 
     @gl.public.write
     def set_oracle(self, oracle_addr: Address):
         """Set the GridOracle address. Call once after deployment."""
+        assert gl.message.sender_account == self.owner, "Only owner can set oracle"
         self.grid_oracle_addr = oracle_addr
 
     @gl.public.write
     def route_inference(self, prompt: str, preferences: str) -> str:
+        assert len(prompt) < 10000, "Prompt too long"
+        assert len(preferences) < 1000, "Preferences too long"
+        assert self.grid_oracle_addr != Address(b'\x00' * 20), "Oracle not set"
+
         # Step 1: Read zone data from GridOracle (DETERMINISTIC)
         oracle = gl.get_contract_at(self.grid_oracle_addr)
         zone_data_str = oracle.view().get_zone_data()
@@ -40,7 +56,8 @@ Respond ONLY with valid JSON: {{"zone": "XX", "reasoning": "one sentence"}}"""
                 return False
             try:
                 data = json.loads(leader_result.calldata)
-                return "zone" in data and "reasoning" in data
+                return ("zone" in data and "reasoning" in data
+                        and data["zone"] in {"FI", "DE", "US", "GB"})
             except Exception:
                 return False
 
