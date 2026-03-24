@@ -22,10 +22,14 @@ class SpatialRouterSimple(gl.Contract):
             assert gl.message.sender_account == self.owner, "Owner already set"
 
     @gl.public.write
-    def route_inference(self, prompt: str, latency_priority: u32, reasoning_priority: u32, carbon_priority: u32) -> str:
+    def route_inference(self, prompt: str, priorities_json: str) -> str:
         """Route inference based on three verifiable dimensions.
-        Each priority is 0-10. Higher = more important to the agent."""
+        priorities_json: {"latency": 0-10, "reasoning": 0-10, "carbon": 0-10}"""
         assert len(prompt) < 10000, "Prompt too long"
+        priorities = json.loads(priorities_json)
+        latency_priority = priorities.get("latency", 5)
+        reasoning_priority = priorities.get("reasoning", 5)
+        carbon_priority = priorities.get("carbon", 5)
 
         nodes = {
             "FI": {

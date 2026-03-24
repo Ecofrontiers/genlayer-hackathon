@@ -343,7 +343,7 @@ const NETWORKS = {
     chain: testnetBradbury,
     name: 'Bradbury Testnet',
     oracle: '0x941948E5ecf03647D58D7C6A090447c9B6973652',
-    router: '0xCcAB82010fa56AEEA790565862422a5EC58dd9c7',
+    router: '0x969aA130b6A55F7Ff9b417c8aE66Eb99DE44a37C',
     explorer: 'https://explorer-bradbury.genlayer.com',
     routeFn: 'route_inference',
     routeArgs: (prompt, prefs) => [prompt, prefs],
@@ -585,7 +585,7 @@ window.routeInference = async function() {
   loading.classList.remove('hidden');
   try {
     const txHash = await client.writeContract({
-      address: net().router, functionName: 'route_inference', args: [prompt, latency, reasoning, carbon], value: BigInt(0),
+      address: net().router, functionName: 'route_inference', args: [prompt, JSON.stringify({latency, reasoning, carbon})], value: BigInt(0),
     });
     lastTxHash = txHash;
 
