@@ -1,0 +1,11 @@
+.env
+SECRETS.enc
+node_modules/
+__pycache__/
+*.pyc
+.pytest_cache/
+.venv/
+ref/
+artifacts/
+frontend/config.js
+package-lock.json

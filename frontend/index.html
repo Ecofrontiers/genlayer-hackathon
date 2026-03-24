@@ -1,0 +1,467 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>WindfallRouter — Trustless Spatial Inference Routing</title>
+<meta name="description" content="Validators with different LLMs consensus on where your AI query should run.">
+<script src="https://cdn.tailwindcss.com"></script>
+<link href="https://api.mapbox.com/mapbox-gl-js/v3.3.0/mapbox-gl.css" rel="stylesheet">
+<script src="https://api.mapbox.com/mapbox-gl-js/v3.3.0/mapbox-gl.js"></script>
+<script src="config.js"></script>
+<script>
+tailwind.config = {
+  theme: {
+    extend: {
+      colors: {
+        bg: '#FDFBF7',
+        heading: '#2A2520',
+        body: '#5C5347',
+        sage: '#3A5A3E',
+        'sage-light': '#7A9A7E',
+        coral: '#E07A5F',
+        warm: '#F0EBE1',
+        border: '#E3DDD1',
+        dark: '#1C1917',
+      },
+      fontFamily: {
+        display: ['Georgia', 'serif'],
+        sans: ['Inter', 'system-ui', 'sans-serif'],
+        mono: ['SF Mono', 'Fira Code', 'monospace'],
+      }
+    }
+  }
+}
+</script>
+<style>
+  body { background: #FDFBF7; }
+  @keyframes pulse-zone { 0%, 100% { transform: scale(1); opacity: 1; } 50% { transform: scale(1.6); opacity: 0.6; } }
+  .mapboxgl-popup-content { font-family: 'Inter', sans-serif; padding: 12px 16px; border-radius: 8px; }
+  .loading-dots::after { content: ''; animation: dots 1.5s steps(3) infinite; }
+  @keyframes dots { 0% { content: ''; } 33% { content: '.'; } 66% { content: '..'; } 100% { content: '...'; } }
+  /* Hide mapbox logo and info button */
+  .mapboxgl-ctrl-logo, .mapboxgl-ctrl-attrib { display: none !important; }
+  /* Tab styling */
+  .tab-btn { border-bottom: 2px solid transparent; transition: all 0.2s; }
+  .tab-btn.active { border-bottom-color: #3A5A3E; color: #2A2520; }
+  .tab-content { display: none; }
+  .tab-content.active { display: block; }
+</style>
+</head>
+<body class="min-h-screen font-sans text-body">
+
+<!-- Header -->
+<header class="border-b border-border px-6 py-3">
+  <div class="max-w-7xl mx-auto flex items-center justify-between">
+    <div class="flex items-center gap-3">
+      <!-- Logo: Portico-style gateway icon -->
+      <svg class="w-7 h-7 text-sage" viewBox="0 0 32 32" fill="none">
+        <path d="M4 28V12L16 4l12 8v16" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+        <path d="M12 28V18h8v10" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+        <circle cx="16" cy="13" r="2" fill="currentColor" opacity="0.5"/>
+      </svg>
+      <div>
+        <h1 class="font-display text-xl font-bold text-heading leading-tight">WindfallRouter</h1>
+        <p class="text-[10px] text-body">Trustless spatial inference routing on GenLayer</p>
+      </div>
+      <a href="https://github.com/Ecofrontiers/genlayer-hackathon#readme" target="_blank" class="ml-2 text-sage hover:text-heading transition-colors" title="How WindfallRouter Works">
+        <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>
+      </a>
+    </div>
+    <div class="flex items-center gap-3 text-xs">
+      <span class="px-2 py-0.5 rounded text-[9px] font-mono text-body bg-warm">Studionet</span>
+      <span id="status-badge" class="px-2.5 py-1 rounded-full text-[10px] font-medium bg-warm text-body">Connecting</span>
+      <a href="https://x.com/ecofrontiers" target="_blank" class="text-body hover:text-sage">
+        <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="currentColor"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
+      </a>
+      <a href="https://linkedin.com/company/ecofrontiers" target="_blank" class="text-body hover:text-sage">
+        <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="currentColor"><path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433c-1.144 0-2.063-.926-2.063-2.065 0-1.138.92-2.063 2.063-2.063 1.14 0 2.064.925 2.064 2.063 0 1.139-.925 2.065-2.064 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z"/></svg>
+      </a>
+      <a href="https://github.com/Ecofrontiers/genlayer-hackathon" target="_blank" class="text-body hover:text-sage">
+        <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"/></svg>
+      </a>
+    </div>
+  </div>
+</header>
+
+<!-- Main -->
+<main class="max-w-7xl mx-auto px-6 py-5">
+  <div class="grid grid-cols-12 gap-5">
+
+    <!-- Left: Map + Zone Cards -->
+    <div class="col-span-5">
+      <h2 class="text-xs font-bold text-sage tracking-widest uppercase mb-3">Energy Zones</h2>
+      <div id="map" class="rounded-lg border border-border overflow-hidden" style="height: 320px;"></div>
+      <div class="grid grid-cols-3 gap-2 mt-2">
+        <div id="card-FI" class="bg-white border border-border rounded-lg p-2.5 text-center cursor-pointer hover:border-sage transition-colors">
+          <div class="text-xs font-bold text-heading">FI</div>
+          <div class="text-[9px] text-body">Helsinki</div>
+          <div id="carbon-FI" class="text-lg font-mono font-bold text-sage mt-0.5">--</div>
+          <div class="text-[9px] text-body">gCO2/kWh</div>
+          <div class="text-[9px] text-body">Renew: <span id="renewable-FI">--</span>%</div>
+        </div>
+        <div id="card-DE" class="bg-white border border-border rounded-lg p-2.5 text-center cursor-pointer hover:border-coral transition-colors">
+          <div class="text-xs font-bold text-heading">DE</div>
+          <div class="text-[9px] text-body">Nuremberg</div>
+          <div id="carbon-DE" class="text-lg font-mono font-bold text-coral mt-0.5">--</div>
+          <div class="text-[9px] text-body">gCO2/kWh</div>
+          <div class="text-[9px] text-body">Renew: <span id="renewable-DE">--</span>%</div>
+        </div>
+        <div id="card-US" class="bg-white border border-border rounded-lg p-2.5 text-center cursor-pointer hover:border-coral transition-colors">
+          <div class="text-xs font-bold text-heading">US</div>
+          <div class="text-[9px] text-body">Ashburn</div>
+          <div id="carbon-US" class="text-lg font-mono font-bold text-coral mt-0.5">--</div>
+          <div class="text-[9px] text-body">gCO2/kWh</div>
+          <div class="text-[9px] text-body">Renew: <span id="renewable-US">--</span>%</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Center: Input -->
+    <div class="col-span-3">
+      <h2 class="text-xs font-bold text-sage tracking-widest uppercase mb-3">Route Inference</h2>
+      <div class="bg-white border border-border rounded-lg p-4">
+        <label class="block text-xs font-medium text-heading mb-1.5">Agent Preferences</label>
+        <select id="preferences-select" onchange="toggleCustomPrefs()"
+                class="w-full border border-border rounded px-3 py-2 text-sm text-heading bg-bg focus:outline-none focus:border-sage">
+          <option value="greenest possible">Greenest possible</option>
+          <option value="cheapest">Cheapest</option>
+          <option value="green but fast">Green but fast</option>
+          <option value="balanced">Balanced</option>
+          <option value="custom">Custom...</option>
+        </select>
+        <input id="preferences-custom" type="text" placeholder="Describe your routing preference..."
+               class="hidden w-full border border-border rounded px-3 py-2 text-sm text-heading bg-bg focus:outline-none focus:border-sage mt-1.5">
+        <label class="block text-xs font-medium text-heading mb-1.5 mt-3">Prompt</label>
+        <textarea id="prompt-input" rows="3" placeholder="What would you like to ask?"
+                  class="w-full border border-border rounded px-3 py-2 text-sm text-heading bg-bg focus:outline-none focus:border-sage resize-none">What is 2+2?</textarea>
+        <button id="route-btn" onclick="routeInference()"
+                class="w-full mt-3 bg-sage text-white py-2.5 rounded font-medium text-sm hover:opacity-90 transition-opacity disabled:opacity-40 disabled:cursor-not-allowed">
+          Route Inference
+        </button>
+        <div id="loading-indicator" class="hidden mt-3 text-center">
+          <div class="inline-block w-4 h-4 border-2 border-sage border-t-transparent rounded-full animate-spin"></div>
+          <p class="text-xs text-body mt-1">Validators reasoning<span class="loading-dots"></span></p>
+        </div>
+      </div>
+      <div class="mt-2 bg-warm border border-border rounded-lg p-2.5">
+        <p class="text-[10px] text-body"><b class="text-heading">Centralized:</b> "Routed to Finland, 45 gCO2." <em>Trust us.</em></p>
+        <p class="text-[10px] text-sage font-medium mt-1"><b>WindfallRouter:</b> Validators independently verified. <em>Verify it.</em></p>
+      </div>
+    </div>
+
+    <!-- Right: Tabs (Decision / History) -->
+    <div class="col-span-4">
+      <div class="flex gap-4 mb-3">
+        <button class="tab-btn active text-xs font-bold text-sage tracking-widest uppercase pb-1" data-tab="decision" onclick="switchTab('decision')">Routing Decision</button>
+        <button class="tab-btn text-xs font-bold text-body tracking-widest uppercase pb-1" data-tab="history" onclick="switchTab('history')">History</button>
+      </div>
+
+      <!-- Tab: Routing Decision -->
+      <div id="tab-decision" class="tab-content active">
+        <div id="reasoning-panel" class="bg-white border border-border rounded-lg p-4 min-h-[380px]">
+          <div id="no-result" class="flex items-center justify-center h-full min-h-[350px]">
+            <p class="text-sm text-body opacity-50">Submit a request to see routing reasoning</p>
+          </div>
+          <div id="result-display" class="hidden">
+            <div class="flex items-baseline gap-2 mb-3">
+              <span class="text-xs text-body">Routed to</span>
+              <span id="result-zone" class="font-display font-bold text-heading text-2xl"></span>
+              <span id="result-zone-name" class="text-xs text-body"></span>
+            </div>
+            <div class="border-l-2 border-sage pl-3 mb-3">
+              <span class="text-[10px] text-body uppercase tracking-wider">LLM Reasoning</span>
+              <p id="result-reasoning" class="text-sm text-heading mt-1 leading-relaxed"></p>
+            </div>
+            <div class="flex gap-2 mb-3">
+              <span id="result-carbon" class="px-2 py-1 bg-warm rounded text-xs font-mono text-heading"></span>
+              <span id="result-renewable" class="px-2 py-1 bg-warm rounded text-xs font-mono text-heading"></span>
+            </div>
+            <div class="mb-3">
+              <span class="text-[10px] text-body uppercase tracking-wider">Consensus</span>
+              <div class="w-full bg-warm rounded-full h-1.5 mt-1">
+                <div id="consensus-bar" class="bg-sage h-1.5 rounded-full transition-all duration-1000" style="width: 0%"></div>
+              </div>
+              <p class="text-[10px] text-sage mt-1">Optimistic Democracy — validators agreed</p>
+            </div>
+            <div class="border-t border-border pt-3">
+              <span class="text-[10px] text-body uppercase tracking-wider">Tx Hash</span>
+              <p id="result-tx" class="text-xs font-mono text-body mt-1 break-all select-all"></p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Tab: History -->
+      <div id="tab-history" class="tab-content">
+        <div class="bg-white border border-border rounded-lg overflow-hidden min-h-[380px]">
+          <table class="w-full text-sm">
+            <thead>
+              <tr class="bg-warm text-heading text-xs">
+                <th class="text-left px-3 py-2 font-semibold">#</th>
+                <th class="text-left px-3 py-2 font-semibold">Zone</th>
+                <th class="text-left px-3 py-2 font-semibold">Preferences</th>
+                <th class="text-left px-3 py-2 font-semibold">Reasoning</th>
+              </tr>
+            </thead>
+            <tbody id="history-body">
+              <tr><td colspan="4" class="px-3 py-8 text-center text-body text-xs opacity-50">No routing decisions yet</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+</main>
+
+<!-- Tx Detail Modal -->
+<div id="tx-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center" onclick="if(event.target===this)closeTxModal()">
+  <div class="absolute inset-0 bg-dark/50"></div>
+  <div class="relative bg-bg border border-border rounded-lg shadow-xl max-w-lg w-full mx-4 max-h-[80vh] overflow-y-auto">
+    <div class="sticky top-0 bg-bg border-b border-border px-5 py-3 flex justify-between items-center">
+      <h3 class="font-display font-bold text-heading">Transaction Detail</h3>
+      <button onclick="closeTxModal()" class="text-body hover:text-heading text-lg">&times;</button>
+    </div>
+    <div class="p-5 space-y-4">
+      <div>
+        <span class="text-[10px] text-body uppercase tracking-wider block">Routing Decision</span>
+        <div class="flex items-baseline gap-2 mt-1">
+          <span id="modal-zone" class="font-display font-bold text-heading text-xl"></span>
+          <span id="modal-zone-name" class="text-xs text-body"></span>
+        </div>
+      </div>
+      <div>
+        <span class="text-[10px] text-body uppercase tracking-wider block">Agent Preferences</span>
+        <p id="modal-preferences" class="text-sm text-heading mt-1 bg-warm rounded px-3 py-2 font-mono"></p>
+      </div>
+      <div class="border-l-2 border-sage pl-3">
+        <span class="text-[10px] text-body uppercase tracking-wider block">LLM Reasoning</span>
+        <p id="modal-reasoning" class="text-sm text-heading mt-1 leading-relaxed"></p>
+      </div>
+      <div class="grid grid-cols-2 gap-3">
+        <div class="bg-warm rounded-lg p-3 text-center">
+          <span class="text-[10px] text-body uppercase tracking-wider">Carbon</span>
+          <p id="modal-carbon" class="text-lg font-mono font-bold text-heading mt-1"></p>
+          <span class="text-[9px] text-body">gCO2/kWh</span>
+        </div>
+        <div class="bg-warm rounded-lg p-3 text-center">
+          <span class="text-[10px] text-body uppercase tracking-wider">Renewable</span>
+          <p id="modal-renewable" class="text-lg font-mono font-bold text-sage mt-1"></p>
+          <span class="text-[9px] text-body">% of generation</span>
+        </div>
+      </div>
+      <div>
+        <span class="text-[10px] text-body uppercase tracking-wider block">Consensus</span>
+        <div class="flex items-center gap-2 mt-1">
+          <div class="w-full bg-warm rounded-full h-1.5"><div class="bg-sage h-1.5 rounded-full w-full"></div></div>
+          <span class="text-[10px] text-sage whitespace-nowrap">Verified</span>
+        </div>
+      </div>
+      <div>
+        <span class="text-[10px] text-body uppercase tracking-wider block">Contract</span>
+        <p class="text-xs font-mono text-body mt-1 break-all select-all" id="modal-contract"></p>
+      </div>
+      <div>
+        <span class="text-[10px] text-body uppercase tracking-wider block">Network</span>
+        <p class="text-xs text-body mt-1">GenLayer Studionet (chain 61999)</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Footer -->
+<footer class="border-t border-border px-6 py-3 mt-4">
+  <div class="max-w-7xl mx-auto flex justify-between text-[10px] text-body opacity-50">
+    <span>WindfallRouter — GenLayer Bradbury Hackathon 2026</span>
+    <span><a href="https://ecofrontiers.xyz" class="hover:text-sage">Ecofrontiers SARL</a></span>
+  </div>
+</footer>
+
+<script type="module">
+import { createClient, createAccount, generatePrivateKey } from 'https://esm.sh/genlayer-js@0.23.1';
+import { studionet } from 'https://esm.sh/genlayer-js@0.23.1/chains';
+
+const GRID_ORACLE_ADDR = '0xB36dE30EE7839cCcfBBFf766C2962Db099cc2259';
+const SPATIAL_ROUTER_ADDR = '0x95b4eC5aA0a9E7F2d8d6D9720e7ea71b63389004';
+const EXPLORER = 'https://genlayer-explorer.vercel.app';
+
+const ZONES = {
+  FI: { name: 'Helsinki, Finland', lng: 24.94, lat: 60.17, color: '#3A5A3E', carbon: 45, renewable: 82 },
+  DE: { name: 'Nuremberg, Germany', lng: 11.08, lat: 49.45, color: '#E07A5F', carbon: 302, renewable: 55 },
+  US: { name: 'Ashburn, Virginia', lng: -77.49, lat: 39.04, color: '#C0392B', carbon: 420, renewable: 22 },
+};
+
+let client, map, markers = {};
+
+// ─── Tabs ───────────────────────────────────────────────────────────────
+window.switchTab = function(tab) {
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.toggle('active', b.dataset.tab === tab));
+  document.querySelectorAll('.tab-content').forEach(c => c.classList.toggle('active', c.id === `tab-${tab}`));
+};
+
+// ─── Mapbox ─────────────────────────────────────────────────────────────
+function initMap() {
+  mapboxgl.accessToken = window.WINDFALL_CONFIG?.MAPBOX_TOKEN || '';
+  map = new mapboxgl.Map({
+    container: 'map',
+    style: 'mapbox://styles/mapbox/light-v11',
+    center: [-15, 48],
+    zoom: 1.8,
+    interactive: true,
+    attributionControl: false,
+    logoPosition: 'bottom-right',
+  });
+
+  // Fit bounds to show all 3 nodes with 15% padding
+  map.on('load', () => {
+    const bounds = new mapboxgl.LngLatBounds();
+    Object.values(ZONES).forEach(z => bounds.extend([z.lng, z.lat]));
+    map.fitBounds(bounds, { padding: { top: 50, bottom: 50, left: 50, right: 50 }, maxZoom: 4.5 });
+  });
+
+  for (const [id, zone] of Object.entries(ZONES)) {
+    const el = document.createElement('div');
+    el.id = `marker-${id}`;
+    el.style.cssText = `width: 14px; height: 14px; background: ${zone.color}; border-radius: 50%; border: 2px solid white; box-shadow: 0 1px 4px rgba(0,0,0,0.3); cursor: pointer; transition: all 0.3s;`;
+    const marker = new mapboxgl.Marker({ element: el })
+      .setLngLat([zone.lng, zone.lat])
+      .setPopup(new mapboxgl.Popup({ offset: 10, closeButton: false })
+        .setHTML(`<div style="font-size:11px;"><b>${id}</b> — ${zone.name}<br><span id="popup-${id}">${zone.carbon} gCO2 · ${zone.renewable}% renewable</span></div>`))
+      .addTo(map);
+    markers[id] = { marker, el };
+  }
+}
+
+function highlightZone(zoneId) {
+  for (const [id, { el }] of Object.entries(markers)) {
+    el.style.width = id === zoneId ? '22px' : '14px';
+    el.style.height = id === zoneId ? '22px' : '14px';
+    el.style.background = id === zoneId ? '#3A5A3E' : ZONES[id].color;
+    el.style.boxShadow = id === zoneId ? '0 0 12px rgba(58,90,62,0.6)' : '0 1px 4px rgba(0,0,0,0.3)';
+  }
+  if (ZONES[zoneId]) map.flyTo({ center: [ZONES[zoneId].lng, ZONES[zoneId].lat], zoom: 4, duration: 1500 });
+}
+
+// ─── GenLayer ───────────────────────────────────────────────────────────
+async function init() {
+  initMap();
+  try {
+    const account = createAccount(generatePrivateKey());
+    client = createClient({ chain: studionet, account });
+    document.getElementById('status-badge').textContent = 'Connected';
+    document.getElementById('status-badge').classList.replace('bg-warm', 'bg-sage');
+    document.getElementById('status-badge').classList.add('text-white');
+    await loadZoneData();
+    await loadHistory();
+  } catch (e) {
+    console.error('Init failed:', e);
+    document.getElementById('status-badge').textContent = 'Error';
+    document.getElementById('status-badge').classList.replace('bg-warm', 'bg-coral');
+    document.getElementById('status-badge').classList.add('text-white');
+  }
+}
+
+async function loadZoneData() {
+  if (!client) return;
+  try {
+    const raw = await client.readContract({ address: GRID_ORACLE_ADDR, functionName: 'get_zone_data', args: [] });
+    const zones = JSON.parse(raw);
+    for (const [id, data] of Object.entries(zones)) {
+      const cEl = document.getElementById(`carbon-${id}`);
+      const rEl = document.getElementById(`renewable-${id}`);
+      if (cEl) cEl.textContent = data.carbon;
+      if (rEl) rEl.textContent = data.renewable;
+      // Update local zone data for routing result display
+      if (ZONES[id]) { ZONES[id].carbon = data.carbon; ZONES[id].renewable = data.renewable; }
+      const color = data.carbon < 100 ? '#3A5A3E' : data.carbon < 250 ? '#E07A5F' : '#C0392B';
+      if (markers[id]) markers[id].el.style.background = color;
+      if (cEl) { cEl.classList.toggle('text-sage', data.carbon < 100); cEl.classList.toggle('text-coral', data.carbon >= 100); }
+    }
+  } catch (e) { console.error('Zone data load failed:', e); }
+}
+
+window.toggleCustomPrefs = function() {
+  const sel = document.getElementById('preferences-select');
+  const custom = document.getElementById('preferences-custom');
+  custom.classList.toggle('hidden', sel.value !== 'custom');
+  if (sel.value === 'custom') custom.focus();
+};
+
+window.routeInference = async function() {
+  const sel = document.getElementById('preferences-select');
+  const preferences = sel.value === 'custom' ? document.getElementById('preferences-custom').value : sel.value;
+  if (!preferences) return;
+  const btn = document.getElementById('route-btn');
+  const loading = document.getElementById('loading-indicator');
+  btn.disabled = true;
+  loading.classList.remove('hidden');
+  try {
+    const txHash = await client.writeContract({
+      address: SPATIAL_ROUTER_ADDR, functionName: 'route_simple', args: [preferences], value: BigInt(0),
+    });
+    const txLink = document.getElementById('result-tx');
+    if (txLink) { txLink.textContent = txHash; txLink.removeAttribute('href'); txLink.title = 'GenLayer transaction hash'; }
+    await client.waitForTransactionReceipt({ hash: txHash, retries: 60, interval: 5000 });
+    const historyRaw = await client.readContract({ address: SPATIAL_ROUTER_ADDR, functionName: 'get_history', args: [] });
+    const history = JSON.parse(historyRaw);
+    const latest = history[history.length - 1] || {};
+    const zone = latest.zone || 'FI';
+    document.getElementById('no-result').classList.add('hidden');
+    document.getElementById('result-display').classList.remove('hidden');
+    document.getElementById('result-zone').textContent = zone;
+    document.getElementById('result-zone-name').textContent = ZONES[zone]?.name || '';
+    document.getElementById('result-reasoning').textContent = latest.reasoning || 'Consensus reached';
+    // Use ZONES lookup for carbon/renewable since history doesn't store zone_data
+    document.getElementById('result-carbon').textContent = `${ZONES[zone]?.carbon || '?'} gCO2/kWh`;
+    document.getElementById('result-renewable').textContent = `${ZONES[zone]?.renewable || '?'}% renewable`;
+    setTimeout(() => { document.getElementById('consensus-bar').style.width = '100%'; }, 100);
+    highlightZone(zone);
+    await loadHistory();
+  } catch (e) {
+    console.error('Route failed:', e);
+    alert('Routing failed: ' + e.message);
+  } finally { btn.disabled = false; loading.classList.add('hidden'); }
+};
+
+async function loadHistory() {
+  if (!client) return;
+  try {
+    const raw = await client.readContract({ address: SPATIAL_ROUTER_ADDR, functionName: 'get_history', args: [] });
+    const history = JSON.parse(raw);
+    const tbody = document.getElementById('history-body');
+    if (!history.length) { tbody.innerHTML = '<tr><td colspan="4" class="px-3 py-8 text-center text-body text-xs opacity-50">No routing decisions yet</td></tr>'; return; }
+    window._history = history;
+    tbody.innerHTML = history.map((h, i) => `
+      <tr class="border-t border-border hover:bg-warm/50 transition-colors cursor-pointer" onclick="openTxModal(${i})">
+        <td class="px-3 py-2 text-xs text-body">${i + 1}</td>
+        <td class="px-3 py-2 font-bold text-heading">${h.zone || '?'}</td>
+        <td class="px-3 py-2 text-xs">${h.preferences || ''}</td>
+        <td class="px-3 py-2 text-xs text-body">${(h.reasoning || '').substring(0, 80)}${(h.reasoning || '').length > 80 ? '...' : ''}</td>
+      </tr>
+    `).join('');
+  } catch (e) { console.error('History load failed:', e); }
+}
+
+window.openTxModal = function(idx) {
+  const h = window._history?.[idx];
+  if (!h) return;
+  const zone = h.zone || '?';
+  const z = ZONES[zone] || {};
+  document.getElementById('modal-zone').textContent = zone;
+  document.getElementById('modal-zone-name').textContent = z.name || '';
+  document.getElementById('modal-preferences').textContent = h.preferences || 'N/A';
+  document.getElementById('modal-reasoning').textContent = h.reasoning || '';
+  document.getElementById('modal-carbon').textContent = z.carbon || '?';
+  document.getElementById('modal-renewable').textContent = (z.renewable || '?') + '%';
+  document.getElementById('modal-contract').textContent = SPATIAL_ROUTER_ADDR;
+  document.getElementById('tx-modal').classList.remove('hidden');
+};
+
+window.closeTxModal = function() {
+  document.getElementById('tx-modal').classList.add('hidden');
+};
+
+init();
+</script>
+</body>
+</html>
