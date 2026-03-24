@@ -94,33 +94,54 @@ tailwind.config = {
     <!-- Left: Map + Zone Cards -->
     <div class="col-span-5">
       <div class="flex items-center justify-between mb-3">
-        <h2 class="text-xs font-bold text-sage tracking-widest uppercase">Energy Zones</h2>
+        <h2 class="text-xs font-bold text-sage tracking-widest uppercase">Inference Nodes</h2>
         <button id="refresh-btn" onclick="refreshLiveData()" class="text-[9px] px-2 py-0.5 rounded border border-sage text-sage hover:bg-sage hover:text-white transition-colors">
           Refresh Live Data
         </button>
       </div>
       <div id="map" class="rounded-lg border border-border overflow-hidden" style="height: 320px;"></div>
-      <div class="grid grid-cols-3 gap-2 mt-2">
-        <div id="card-FI" class="bg-white border border-border rounded-lg p-2.5 text-center cursor-pointer hover:border-sage transition-colors">
-          <div class="text-xs font-bold text-heading">FI</div>
-          <div class="text-[8px] font-mono text-sage">DeepSeek V3</div>
-          <div id="carbon-FI" class="text-lg font-mono font-bold text-sage mt-0.5">45</div>
-          <div class="text-[9px] text-body">gCO2 · $0.0004/1k</div>
-          <div class="text-[9px] text-body">145ms · <span id="renewable-FI">82</span>% renew</div>
+      <div class="grid grid-cols-3 gap-2.5 mt-3">
+        <div id="card-FI" class="bg-white border-2 border-sage/30 rounded-lg p-3 cursor-pointer hover:border-sage transition-colors">
+          <div class="flex items-center justify-between mb-1">
+            <span class="text-sm font-bold text-heading">FI</span>
+            <span class="text-[8px] px-1.5 py-0.5 rounded-full bg-sage/10 text-sage font-medium">greenest</span>
+          </div>
+          <div class="text-[10px] font-mono text-sage font-medium">DeepSeek V3</div>
+          <div class="text-[9px] text-body mt-1">code, math, structured</div>
+          <div class="grid grid-cols-3 gap-1 mt-2 text-center">
+            <div><div class="text-[8px] text-body">carbon</div><div id="carbon-FI" class="text-sm font-mono font-bold text-sage">45</div></div>
+            <div><div class="text-[8px] text-body">latency</div><div class="text-sm font-mono font-bold text-body">145ms</div></div>
+            <div><div class="text-[8px] text-body">reason</div><div class="text-sm font-mono font-bold text-body">7/10</div></div>
+          </div>
+          <div class="hidden"><span id="renewable-FI">82</span></div>
         </div>
-        <div id="card-DE" class="bg-white border border-border rounded-lg p-2.5 text-center cursor-pointer hover:border-coral transition-colors">
-          <div class="text-xs font-bold text-heading">DE</div>
-          <div class="text-[8px] font-mono text-body">Llama 3.3 70B</div>
-          <div id="carbon-DE" class="text-lg font-mono font-bold text-coral mt-0.5">302</div>
-          <div class="text-[9px] text-body">gCO2 · $0.0008/1k</div>
-          <div class="text-[9px] text-body">89ms · <span id="renewable-DE">55</span>% renew</div>
+        <div id="card-DE" class="bg-white border-2 border-border rounded-lg p-3 cursor-pointer hover:border-coral transition-colors">
+          <div class="flex items-center justify-between mb-1">
+            <span class="text-sm font-bold text-heading">DE</span>
+            <span class="text-[8px] px-1.5 py-0.5 rounded-full bg-warm text-body font-medium">balanced</span>
+          </div>
+          <div class="text-[10px] font-mono text-body font-medium">Llama 3.3 70B</div>
+          <div class="text-[9px] text-body mt-1">general, multilingual</div>
+          <div class="grid grid-cols-3 gap-1 mt-2 text-center">
+            <div><div class="text-[8px] text-body">carbon</div><div id="carbon-DE" class="text-sm font-mono font-bold text-coral">302</div></div>
+            <div><div class="text-[8px] text-body">latency</div><div class="text-sm font-mono font-bold text-body">89ms</div></div>
+            <div><div class="text-[8px] text-body">reason</div><div class="text-sm font-mono font-bold text-body">6/10</div></div>
+          </div>
+          <div class="hidden"><span id="renewable-DE">55</span></div>
         </div>
-        <div id="card-US" class="bg-white border border-border rounded-lg p-2.5 text-center cursor-pointer hover:border-coral transition-colors">
-          <div class="text-xs font-bold text-heading">US</div>
-          <div class="text-[8px] font-mono text-body">Claude Sonnet 4</div>
-          <div id="carbon-US" class="text-lg font-mono font-bold text-coral mt-0.5">420</div>
-          <div class="text-[9px] text-body">gCO2 · $0.003/1k</div>
-          <div class="text-[9px] text-body">45ms · <span id="renewable-US">22</span>% renew</div>
+        <div id="card-US" class="bg-white border-2 border-border rounded-lg p-3 cursor-pointer hover:border-coral transition-colors">
+          <div class="flex items-center justify-between mb-1">
+            <span class="text-sm font-bold text-heading">US</span>
+            <span class="text-[8px] px-1.5 py-0.5 rounded-full bg-warm text-body font-medium">smartest</span>
+          </div>
+          <div class="text-[10px] font-mono text-body font-medium">Claude Sonnet 4</div>
+          <div class="text-[9px] text-body mt-1">reasoning, analysis, writing</div>
+          <div class="grid grid-cols-3 gap-1 mt-2 text-center">
+            <div><div class="text-[8px] text-body">carbon</div><div id="carbon-US" class="text-sm font-mono font-bold text-coral">420</div></div>
+            <div><div class="text-[8px] text-body">latency</div><div class="text-sm font-mono font-bold text-sage">45ms</div></div>
+            <div><div class="text-[8px] text-body">reason</div><div class="text-sm font-mono font-bold text-sage">9/10</div></div>
+          </div>
+          <div class="hidden"><span id="renewable-US">22</span></div>
         </div>
       </div>
     </div>
@@ -175,9 +196,9 @@ tailwind.config = {
           <p class="text-xs text-body mt-1">Validators reasoning<span class="loading-dots"></span></p>
         </div>
       </div>
-      <div class="mt-2 bg-warm border border-border rounded-lg p-2.5">
-        <p class="text-[10px] text-body"><b class="text-heading">Centralized:</b> "Routed to Finland, 45 gCO2." <em>Trust us.</em></p>
-        <p class="text-[10px] text-sage font-medium mt-1"><b>WindfallRouter:</b> Validators independently verified. <em>Verify it.</em></p>
+      <div class="mt-2 bg-sage/5 border border-sage/20 rounded-lg p-2.5">
+        <p class="text-[10px] text-body"><b class="text-heading">Centralized gateway:</b> one server picks the route. <em class="text-coral">Trust us.</em></p>
+        <p class="text-[10px] text-sage font-medium mt-1"><b>WindfallRouter:</b> 5 validators independently re-reason. <em>Verify it onchain.</em></p>
       </div>
     </div>
 
@@ -634,7 +655,7 @@ async function loadHistory() {
     tbody.innerHTML = history.map((h, i) => `
       <tr class="border-t border-border hover:bg-warm/50 transition-colors cursor-pointer" onclick="openTxModal(${i})">
         <td class="px-3 py-2 text-xs text-body">${i + 1}</td>
-        <td class="px-3 py-2 font-bold text-heading">${h.zone || '?'}</td>
+        <td class="px-3 py-2"><span class="font-bold text-heading">${h.zone || '?'}</span><span class="text-[8px] font-mono text-body ml-1">${h.model || ''}</span></td>
         <td class="px-3 py-2 text-[9px] font-mono">${h.priorities ? `L${h.priorities.latency} R${h.priorities.reasoning} C${h.priorities.carbon}` : (h.preferences || '')}</td>
         <td class="px-3 py-2 text-xs text-body">${(h.reasoning || '').substring(0, 80)}${(h.reasoning || '').length > 80 ? '...' : ''}</td>
       </tr>
