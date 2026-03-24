@@ -91,7 +91,7 @@ async function main() {
   // Step 6: Test routing
   console.log('\nTest routing...');
   const tx = await client.writeContract({
-    address: routerAddr, functionName: 'route_simple', args: ['greenest possible'], value: BigInt(0),
+    address: routerAddr, functionName: 'route_inference', args: ['What is 2+2?', JSON.stringify({latency:5,reasoning:5,carbon:5})], value: BigInt(0),
   });
   console.log(`  tx: ${tx}`);
   console.log(`  explorer: https://explorer-bradbury.genlayer.com/txs/${tx}`);
