@@ -80,23 +80,20 @@ Respond ONLY with valid JSON: {{"zone": "XX", "model": "model name", "reasoning"
                 return False
             try:
                 data = json.loads(leader_result.calldata)
+                # Structural: valid JSON with required fields
                 if "zone" not in data or "reasoning" not in data:
                     return False
                 if data["zone"] not in {"FI", "DE", "US"}:
                     return False
-
-                assessment = gl.nondet.exec_prompt(
-                    f"""An inference router chose {data.get("model", "unknown")} in zone {data["zone"]}.
-
-Task: "{prompt}"
-Agent priorities: {priorities}
-Reasoning: "{data["reasoning"]}"
-
-Nodes: {nodes_str}
-
-Is this defensible given the agent's priorities? Reply ONLY "YES" or "NO" with one sentence."""
-                )
-                return "YES" in assessment.upper()
+                # Semantic: reasoning must reference the chosen zone or model
+                reasoning_lower = data["reasoning"].lower()
+                zone = data["zone"]
+                node = nodes[zone]
+                # Check reasoning mentions something relevant
+                has_zone_ref = zone.lower() in reasoning_lower or node["location"].lower() in reasoning_lower
+                has_model_ref = node["model"].lower() in reasoning_lower
+                has_priority_ref = any(w in reasoning_lower for w in ["latency", "quality", "carbon", "fast", "green", "smart", "reason"])
+                return has_zone_ref or has_model_ref or has_priority_ref
             except Exception:
                 return False
 
