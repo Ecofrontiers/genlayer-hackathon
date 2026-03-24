@@ -22,62 +22,52 @@ class SpatialRouterSimple(gl.Contract):
             assert gl.message.sender_account == self.owner, "Owner already set"
 
     @gl.public.write
-    def route_inference(self, prompt: str, preferences: str) -> str:
-        assert len(preferences) < 1000, "Preferences too long"
+    def route_inference(self, prompt: str, latency_priority: u32, reasoning_priority: u32, carbon_priority: u32) -> str:
+        """Route inference based on three verifiable dimensions.
+        Each priority is 0-10. Higher = more important to the agent."""
         assert len(prompt) < 10000, "Prompt too long"
 
         nodes = {
             "FI": {
                 "location": "Helsinki",
                 "model": "DeepSeek V3",
-                "model_strengths": "code, math, structured output",
-                "cost_per_1k_tokens": 0.0004,
+                "reasoning_score": 7,
                 "latency_ms": 145,
-                "carbon_gco2_kwh": 45,
-                "renewable_pct": 82
+                "carbon_gco2_kwh": 45
             },
             "DE": {
                 "location": "Nuremberg",
                 "model": "Llama 3.3 70B",
-                "model_strengths": "general purpose, multilingual, fast",
-                "cost_per_1k_tokens": 0.0008,
+                "reasoning_score": 6,
                 "latency_ms": 89,
-                "carbon_gco2_kwh": 302,
-                "renewable_pct": 55
+                "carbon_gco2_kwh": 302
             },
             "US": {
                 "location": "Ashburn, VA",
                 "model": "Claude Sonnet 4",
-                "model_strengths": "reasoning, analysis, writing, complex tasks",
-                "cost_per_1k_tokens": 0.003,
+                "reasoning_score": 9,
                 "latency_ms": 45,
-                "carbon_gco2_kwh": 420,
-                "renewable_pct": 22
+                "carbon_gco2_kwh": 420
             }
         }
 
+        priorities = f"latency={latency_priority}/10, reasoning={reasoning_priority}/10, carbon={carbon_priority}/10"
         nodes_str = json.dumps(nodes)
 
         def leader_fn():
             result = gl.nondet.exec_prompt(
-                f"""You are an inference router. You must select which node should handle this request.
+                f"""You are an inference router. Select which node handles this request.
 
-AVAILABLE NODES:
+NODES:
 {nodes_str}
 
-AGENT'S TASK: "{prompt}"
+TASK: "{prompt}"
 
-AGENT'S ROUTING PREFERENCES: "{preferences}"
+AGENT PRIORITIES: {priorities}
 
-Select the best node by weighing:
-1. Model fit — does the model's strengths match the task?
-2. Cost — per 1k tokens (lower = cheaper)
-3. Latency — response time in ms (lower = faster)
-4. Carbon — gCO2/kWh of the zone's grid (lower = greener)
+Each node has a model with a reasoning score (higher=smarter), latency (lower=faster), and carbon intensity (lower=greener). The agent's priorities tell you how to weigh these three dimensions.
 
-The agent's preferences tell you how to weigh these factors.
-
-Respond ONLY with valid JSON: {{"zone": "XX", "model": "model name", "reasoning": "one sentence explaining the tradeoff you made"}}"""
+Respond ONLY with valid JSON: {{"zone": "XX", "model": "model name", "reasoning": "one sentence explaining the tradeoff"}}"""
             )
             return result
 
@@ -92,24 +82,22 @@ Respond ONLY with valid JSON: {{"zone": "XX", "model": "model name", "reasoning"
                     return False
 
                 assessment = gl.nondet.exec_prompt(
-                    f"""An inference router chose {data.get("model", "unknown")} in zone {data["zone"]} for this task:
+                    f"""An inference router chose {data.get("model", "unknown")} in zone {data["zone"]}.
 
 Task: "{prompt}"
-Preferences: "{preferences}"
+Agent priorities: {priorities}
 Reasoning: "{data["reasoning"]}"
 
-Available nodes: {nodes_str}
+Nodes: {nodes_str}
 
-Is this a defensible routing choice? Consider whether the model fits the task, and whether the cost/latency/carbon tradeoff respects the agent's preferences.
-
-Reply with ONLY "YES" or "NO" followed by one sentence."""
+Is this defensible given the agent's priorities? Reply ONLY "YES" or "NO" with one sentence."""
                 )
                 return "YES" in assessment.upper()
             except Exception:
                 return False
 
         routing = json.loads(gl.vm.run_nondet_unsafe(leader_fn, validator_fn))
-        routing["preferences"] = preferences
+        routing["priorities"] = {"latency": int(latency_priority), "reasoning": int(reasoning_priority), "carbon": int(carbon_priority)}
         routing["prompt_preview"] = prompt[:100]
         routing["node_data"] = nodes.get(routing.get("zone", "FI"), {})
         self.routing_history.append(json.dumps(routing))

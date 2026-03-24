@@ -129,21 +129,41 @@ tailwind.config = {
     <div class="col-span-3">
       <h2 class="text-xs font-bold text-sage tracking-widest uppercase mb-3">Route Inference</h2>
       <div class="bg-white border border-border rounded-lg p-4">
-        <label class="block text-xs font-medium text-heading mb-1.5">Agent Preferences</label>
-        <select id="preferences-select" onchange="toggleCustomPrefs()"
-                class="w-full border border-border rounded px-3 py-2 text-sm text-heading bg-bg focus:outline-none focus:border-sage">
-          <option value="greenest possible">Greenest possible</option>
-          <option value="cheapest inference">Cheapest inference</option>
-          <option value="fastest response">Fastest response</option>
-          <option value="best quality for reasoning tasks">Best quality</option>
-          <option value="green but fast">Green but fast</option>
-          <option value="cheap and green">Cheap and green</option>
-          <option value="balanced cost, speed, and carbon">Balanced</option>
-          <option value="custom">Custom...</option>
-        </select>
-        <input id="preferences-custom" type="text" placeholder="Describe your routing preference..."
-               class="hidden w-full border border-border rounded px-3 py-2 text-sm text-heading bg-bg focus:outline-none focus:border-sage mt-1.5">
-        <label class="block text-xs font-medium text-heading mb-1.5 mt-3">Prompt</label>
+        <label class="block text-xs font-medium text-heading mb-1">Agent Priorities</label>
+        <div class="space-y-2 mb-3">
+          <div>
+            <div class="flex justify-between text-[10px]">
+              <span class="text-body">Latency</span>
+              <span id="latency-val" class="font-mono text-heading">5</span>
+            </div>
+            <input id="slider-latency" type="range" min="0" max="10" value="5" oninput="document.getElementById('latency-val').textContent=this.value"
+                   class="w-full h-1 bg-border rounded-full appearance-none cursor-pointer accent-sage">
+          </div>
+          <div>
+            <div class="flex justify-between text-[10px]">
+              <span class="text-body">Reasoning</span>
+              <span id="reasoning-val" class="font-mono text-heading">5</span>
+            </div>
+            <input id="slider-reasoning" type="range" min="0" max="10" value="5" oninput="document.getElementById('reasoning-val').textContent=this.value"
+                   class="w-full h-1 bg-border rounded-full appearance-none cursor-pointer accent-sage">
+          </div>
+          <div>
+            <div class="flex justify-between text-[10px]">
+              <span class="text-body">Carbon</span>
+              <span id="carbon-val" class="font-mono text-heading">5</span>
+            </div>
+            <input id="slider-carbon" type="range" min="0" max="10" value="5" oninput="document.getElementById('carbon-val').textContent=this.value"
+                   class="w-full h-1 bg-border rounded-full appearance-none cursor-pointer accent-sage">
+          </div>
+          <div class="flex gap-1 flex-wrap">
+            <button onclick="setPreset(0,0,10)" class="text-[9px] px-1.5 py-0.5 rounded border border-border hover:border-sage text-body">Greenest</button>
+            <button onclick="setPreset(10,0,0)" class="text-[9px] px-1.5 py-0.5 rounded border border-border hover:border-sage text-body">Fastest</button>
+            <button onclick="setPreset(0,10,0)" class="text-[9px] px-1.5 py-0.5 rounded border border-border hover:border-sage text-body">Smartest</button>
+            <button onclick="setPreset(7,3,8)" class="text-[9px] px-1.5 py-0.5 rounded border border-border hover:border-sage text-body">Green+Fast</button>
+            <button onclick="setPreset(5,5,5)" class="text-[9px] px-1.5 py-0.5 rounded border border-border hover:border-sage text-body">Balanced</button>
+          </div>
+        </div>
+        <label class="block text-xs font-medium text-heading mb-1.5">Prompt</label>
         <textarea id="prompt-input" rows="3" placeholder="What would you like to ask?"
                   class="w-full border border-border rounded px-3 py-2 text-sm text-heading bg-bg focus:outline-none focus:border-sage resize-none">What is 2+2?</textarea>
         <button id="route-btn" onclick="routeInference()"
@@ -221,7 +241,7 @@ tailwind.config = {
               <tr class="bg-warm text-heading text-xs">
                 <th class="text-left px-3 py-2 font-semibold">#</th>
                 <th class="text-left px-3 py-2 font-semibold">Zone</th>
-                <th class="text-left px-3 py-2 font-semibold">Preferences</th>
+                <th class="text-left px-3 py-2 font-semibold">Priorities</th>
                 <th class="text-left px-3 py-2 font-semibold">Reasoning</th>
               </tr>
             </thead>
@@ -318,10 +338,8 @@ const NETWORKS = {
     chain: studionet,
     name: 'Studionet',
     oracle: '0xB36dE30EE7839cCcfBBFf766C2962Db099cc2259',
-    router: '0x95b4eC5aA0a9E7F2d8d6D9720e7ea71b63389004',
+    router: '',  // needs redeployment with new contract
     explorer: null,
-    routeFn: 'route_simple',  // old contract
-    routeArgs: (prompt, prefs) => [prefs],
   },
   bradbury: {
     chain: testnetBradbury,
@@ -504,26 +522,28 @@ function showSavings(prefix, zone) {
     `Routing to ${s.chosen} (${s.chosenCarbon} gCO2) instead of ${s.worst} (${s.worstCarbon} gCO2) saves ~${s.gramsPerInference}g CO2 per inference (~0.005 kWh avg).`;
 }
 
-window.toggleCustomPrefs = function() {
-  const sel = document.getElementById('preferences-select');
-  const custom = document.getElementById('preferences-custom');
-  custom.classList.toggle('hidden', sel.value !== 'custom');
-  if (sel.value === 'custom') custom.focus();
+window.setPreset = function(lat, reas, carb) {
+  document.getElementById('slider-latency').value = lat;
+  document.getElementById('slider-reasoning').value = reas;
+  document.getElementById('slider-carbon').value = carb;
+  document.getElementById('latency-val').textContent = lat;
+  document.getElementById('reasoning-val').textContent = reas;
+  document.getElementById('carbon-val').textContent = carb;
 };
 
 window.routeInference = async function() {
   if (!net().router) { alert('No router deployed on ' + net().name); return; }
-  const sel = document.getElementById('preferences-select');
-  const preferences = sel.value === 'custom' ? document.getElementById('preferences-custom').value : sel.value;
   const prompt = document.getElementById('prompt-input').value || 'What is 2+2?';
-  if (!preferences) return;
+  const latency = parseInt(document.getElementById('slider-latency').value);
+  const reasoning = parseInt(document.getElementById('slider-reasoning').value);
+  const carbon = parseInt(document.getElementById('slider-carbon').value);
   const btn = document.getElementById('route-btn');
   const loading = document.getElementById('loading-indicator');
   btn.disabled = true;
   loading.classList.remove('hidden');
   try {
     const txHash = await client.writeContract({
-      address: net().router, functionName: net().routeFn || 'route_inference', args: (net().routeArgs || ((p, pr) => [p, pr]))(prompt, preferences), value: BigInt(0),
+      address: net().router, functionName: 'route_inference', args: [prompt, latency, reasoning, carbon], value: BigInt(0),
     });
     lastTxHash = txHash;
 
@@ -572,7 +592,7 @@ async function loadHistory() {
       <tr class="border-t border-border hover:bg-warm/50 transition-colors cursor-pointer" onclick="openTxModal(${i})">
         <td class="px-3 py-2 text-xs text-body">${i + 1}</td>
         <td class="px-3 py-2 font-bold text-heading">${h.zone || '?'}</td>
-        <td class="px-3 py-2 text-xs">${h.preferences || ''}</td>
+        <td class="px-3 py-2 text-[9px] font-mono">${h.priorities ? `L${h.priorities.latency} R${h.priorities.reasoning} C${h.priorities.carbon}` : (h.preferences || '')}</td>
         <td class="px-3 py-2 text-xs text-body">${(h.reasoning || '').substring(0, 80)}${(h.reasoning || '').length > 80 ? '...' : ''}</td>
       </tr>
     `).join('');
@@ -586,7 +606,8 @@ window.openTxModal = function(idx) {
   const zd = h.zone_data || ZONES[zone] || {};
   document.getElementById('modal-zone').textContent = zone;
   document.getElementById('modal-zone-name').textContent = ZONES[zone]?.name || '';
-  document.getElementById('modal-preferences').textContent = h.preferences || 'N/A';
+  const p = h.priorities;
+  document.getElementById('modal-preferences').textContent = p ? `Latency: ${p.latency}/10  Reasoning: ${p.reasoning}/10  Carbon: ${p.carbon}/10` : (h.preferences || 'N/A');
   document.getElementById('modal-reasoning').textContent = h.reasoning || '';
   document.getElementById('modal-carbon').textContent = zd.carbon || ZONES[zone]?.carbon || '?';
   document.getElementById('modal-renewable').textContent = (zd.renewable || ZONES[zone]?.renewable || '?') + '%';
