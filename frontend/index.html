@@ -111,7 +111,7 @@ tailwind.config = {
           <div class="grid grid-cols-3 gap-1 mt-2 text-center">
             <div><div class="text-[8px] text-body">carbon</div><div id="carbon-FI" class="text-sm font-mono font-bold text-sage">45</div></div>
             <div><div class="text-[8px] text-body">latency</div><div class="text-sm font-mono font-bold text-body">145ms</div></div>
-            <div><div class="text-[8px] text-body">reason</div><div class="text-sm font-mono font-bold text-body">7/10</div></div>
+            <div><div class="text-[8px] text-body">quality</div><div class="text-sm font-mono font-bold text-body">7/10</div></div>
           </div>
           <div class="hidden"><span id="renewable-FI">82</span></div>
         </div>
@@ -125,7 +125,7 @@ tailwind.config = {
           <div class="grid grid-cols-3 gap-1 mt-2 text-center">
             <div><div class="text-[8px] text-body">carbon</div><div id="carbon-DE" class="text-sm font-mono font-bold text-coral">302</div></div>
             <div><div class="text-[8px] text-body">latency</div><div class="text-sm font-mono font-bold text-body">89ms</div></div>
-            <div><div class="text-[8px] text-body">reason</div><div class="text-sm font-mono font-bold text-body">6/10</div></div>
+            <div><div class="text-[8px] text-body">quality</div><div class="text-sm font-mono font-bold text-body">6/10</div></div>
           </div>
           <div class="hidden"><span id="renewable-DE">55</span></div>
         </div>
@@ -139,7 +139,7 @@ tailwind.config = {
           <div class="grid grid-cols-3 gap-1 mt-2 text-center">
             <div><div class="text-[8px] text-body">carbon</div><div id="carbon-US" class="text-sm font-mono font-bold text-coral">420</div></div>
             <div><div class="text-[8px] text-body">latency</div><div class="text-sm font-mono font-bold text-sage">45ms</div></div>
-            <div><div class="text-[8px] text-body">reason</div><div class="text-sm font-mono font-bold text-sage">9/10</div></div>
+            <div><div class="text-[8px] text-body">quality</div><div class="text-sm font-mono font-bold text-sage">9/10</div></div>
           </div>
           <div class="hidden"><span id="renewable-US">22</span></div>
         </div>
@@ -162,10 +162,10 @@ tailwind.config = {
           </div>
           <div>
             <div class="flex justify-between text-[10px]">
-              <span class="text-body">Reasoning</span>
-              <span id="reasoning-val" class="font-mono text-heading">5</span>
+              <span class="text-body">Quality</span>
+              <span id="quality-val" class="font-mono text-heading">5</span>
             </div>
-            <input id="slider-reasoning" type="range" min="0" max="10" value="5" oninput="document.getElementById('reasoning-val').textContent=this.value"
+            <input id="slider-quality" type="range" min="0" max="10" value="5" oninput="document.getElementById('quality-val').textContent=this.value"
                    class="w-full h-1 bg-border rounded-full appearance-none cursor-pointer accent-sage">
           </div>
           <div>
@@ -223,7 +223,7 @@ tailwind.config = {
             </div>
             <div id="result-model" class="text-xs font-mono text-sage mb-3"></div>
             <div class="border-l-2 border-sage pl-3 mb-3">
-              <span class="text-[10px] text-body uppercase tracking-wider">LLM Reasoning</span>
+              <span class="text-[10px] text-body uppercase tracking-wider">LLM Quality</span>
               <p id="result-reasoning" class="text-sm text-heading mt-1 leading-relaxed"></p>
             </div>
             <div class="flex gap-2 mb-3">
@@ -262,7 +262,7 @@ tailwind.config = {
                 <th class="text-left px-3 py-2 font-semibold">#</th>
                 <th class="text-left px-3 py-2 font-semibold">Zone</th>
                 <th class="text-left px-3 py-2 font-semibold">Priorities</th>
-                <th class="text-left px-3 py-2 font-semibold">Reasoning</th>
+                <th class="text-left px-3 py-2 font-semibold">Quality</th>
               </tr>
             </thead>
             <tbody id="history-body">
@@ -296,7 +296,7 @@ tailwind.config = {
         <p id="modal-preferences" class="text-sm text-heading mt-1 bg-warm rounded px-3 py-2 font-mono"></p>
       </div>
       <div class="border-l-2 border-sage pl-3">
-        <span class="text-[10px] text-body uppercase tracking-wider block">LLM Reasoning</span>
+        <span class="text-[10px] text-body uppercase tracking-wider block">LLM Quality</span>
         <p id="modal-reasoning" class="text-sm text-heading mt-1 leading-relaxed"></p>
       </div>
       <div class="grid grid-cols-2 gap-3">
@@ -364,7 +364,7 @@ const NETWORKS = {
     chain: testnetBradbury,
     name: 'Bradbury Testnet',
     oracle: '0x941948E5ecf03647D58D7C6A090447c9B6973652',
-    router: '0x969aA130b6A55F7Ff9b417c8aE66Eb99DE44a37C',
+    router: '0x173AbA17F4A341be4527aEe2CbCac2296159d23f',
     explorer: 'https://explorer-bradbury.genlayer.com',
     routeFn: 'route_inference',
     routeArgs: (prompt, prefs) => [prompt, prefs],
@@ -587,10 +587,10 @@ function renderValidatorVotes(receipt) {
 
 window.setPreset = function(lat, reas, carb) {
   document.getElementById('slider-latency').value = lat;
-  document.getElementById('slider-reasoning').value = reas;
+  document.getElementById('slider-quality').value = reas;
   document.getElementById('slider-carbon').value = carb;
   document.getElementById('latency-val').textContent = lat;
-  document.getElementById('reasoning-val').textContent = reas;
+  document.getElementById('quality-val').textContent = reas;
   document.getElementById('carbon-val').textContent = carb;
 };
 
@@ -598,7 +598,7 @@ window.routeInference = async function() {
   if (!net().router) { alert('No router deployed on ' + net().name); return; }
   const prompt = document.getElementById('prompt-input').value || 'What is 2+2?';
   const latency = parseInt(document.getElementById('slider-latency').value);
-  const reasoning = parseInt(document.getElementById('slider-reasoning').value);
+  const quality = parseInt(document.getElementById('slider-quality').value);
   const carbon = parseInt(document.getElementById('slider-carbon').value);
   const btn = document.getElementById('route-btn');
   const loading = document.getElementById('loading-indicator');
@@ -606,7 +606,7 @@ window.routeInference = async function() {
   loading.classList.remove('hidden');
   try {
     const txHash = await client.writeContract({
-      address: net().router, functionName: 'route_inference', args: [prompt, JSON.stringify({latency, reasoning, carbon})], value: BigInt(0),
+      address: net().router, functionName: 'route_inference', args: [prompt, JSON.stringify({latency, quality, carbon})], value: BigInt(0),
     });
     lastTxHash = txHash;
 
@@ -656,7 +656,7 @@ async function loadHistory() {
       <tr class="border-t border-border hover:bg-warm/50 transition-colors cursor-pointer" onclick="openTxModal(${i})">
         <td class="px-3 py-2 text-xs text-body">${i + 1}</td>
         <td class="px-3 py-2"><span class="font-bold text-heading">${h.zone || '?'}</span><span class="text-[8px] font-mono text-body ml-1">${h.model || ''}</span></td>
-        <td class="px-3 py-2 text-[9px] font-mono">${h.priorities ? `L${h.priorities.latency} R${h.priorities.reasoning} C${h.priorities.carbon}` : (h.preferences || '')}</td>
+        <td class="px-3 py-2 text-[9px] font-mono">${h.priorities ? `L${h.priorities.latency} Q${h.priorities.quality || h.priorities.reasoning} C${h.priorities.carbon}` : (h.preferences || '')}</td>
         <td class="px-3 py-2 text-xs text-body">${(h.reasoning || '').substring(0, 80)}${(h.reasoning || '').length > 80 ? '...' : ''}</td>
       </tr>
     `).join('');
@@ -672,7 +672,7 @@ window.openTxModal = function(idx) {
   document.getElementById('modal-zone').textContent = zone;
   document.getElementById('modal-zone-name').textContent = zn.name || '';
   const p = h.priorities;
-  document.getElementById('modal-preferences').textContent = p ? `Latency: ${p.latency}/10  Reasoning: ${p.reasoning}/10  Carbon: ${p.carbon}/10` : (h.preferences || 'N/A');
+  document.getElementById('modal-preferences').textContent = p ? `Latency: ${p.latency}/10  Quality: ${p.quality || p.reasoning}/10  Carbon: ${p.carbon}/10` : (h.preferences || 'N/A');
   document.getElementById('modal-reasoning').textContent = h.reasoning || '';
   document.getElementById('modal-carbon').textContent = nd.carbon_gco2_kwh || zn.carbon || '?';
   document.getElementById('modal-renewable').textContent = `$${nd.cost_per_1k_tokens || zn.cost || '?'}/1k · ${nd.latency_ms || zn.latency || '?'}ms`;

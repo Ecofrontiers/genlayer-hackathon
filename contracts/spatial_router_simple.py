@@ -24,38 +24,38 @@ class SpatialRouterSimple(gl.Contract):
     @gl.public.write
     def route_inference(self, prompt: str, priorities_json: str) -> str:
         """Route inference based on three verifiable dimensions.
-        priorities_json: {"latency": 0-10, "reasoning": 0-10, "carbon": 0-10}"""
+        priorities_json: {"latency": 0-10, "quality": 0-10, "carbon": 0-10}"""
         assert len(prompt) < 10000, "Prompt too long"
         priorities = json.loads(priorities_json)
         latency_priority = priorities.get("latency", 5)
-        reasoning_priority = priorities.get("reasoning", 5)
+        quality_priority = priorities.get("quality", 5)
         carbon_priority = priorities.get("carbon", 5)
 
         nodes = {
             "FI": {
                 "location": "Helsinki",
                 "model": "DeepSeek V3",
-                "reasoning_score": 7,
+                "quality_score": 7,
                 "latency_ms": 145,
                 "carbon_gco2_kwh": 45
             },
             "DE": {
                 "location": "Nuremberg",
                 "model": "Llama 3.3 70B",
-                "reasoning_score": 6,
+                "quality_score": 6,
                 "latency_ms": 89,
                 "carbon_gco2_kwh": 302
             },
             "US": {
                 "location": "Ashburn, VA",
                 "model": "Claude Sonnet 4",
-                "reasoning_score": 9,
+                "quality_score": 9,
                 "latency_ms": 45,
                 "carbon_gco2_kwh": 420
             }
         }
 
-        priorities = f"latency={latency_priority}/10, reasoning={reasoning_priority}/10, carbon={carbon_priority}/10"
+        priorities = f"latency={latency_priority}/10, quality={quality_priority}/10, carbon={carbon_priority}/10"
         nodes_str = json.dumps(nodes)
 
         def leader_fn():
@@ -101,7 +101,7 @@ Is this defensible given the agent's priorities? Reply ONLY "YES" or "NO" with o
                 return False
 
         routing = json.loads(gl.vm.run_nondet_unsafe(leader_fn, validator_fn))
-        routing["priorities"] = {"latency": int(latency_priority), "reasoning": int(reasoning_priority), "carbon": int(carbon_priority)}
+        routing["priorities"] = {"latency": int(latency_priority), "quality": int(quality_priority), "carbon": int(carbon_priority)}
         routing["prompt_preview"] = prompt[:100]
         routing["node_data"] = nodes.get(routing.get("zone", "FI"), {})
         self.routing_history.append(json.dumps(routing))
