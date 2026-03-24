@@ -14,7 +14,7 @@ class GridOracle(gl.Contract):
     zone_intensity_index: TreeMap[str, str]  # "very low" / "low" / "moderate" / "high" / "very high"
 
     def _get_zones(self):
-        return ["FI", "DE", "US", "GB"]
+        return ["FI", "DE", "US"]
 
     def _only_owner(self):
         assert gl.message.sender_account == self.owner, "Only owner can call this"
@@ -26,40 +26,6 @@ class GridOracle(gl.Contract):
             self.owner = gl.message.sender_account
         else:
             assert gl.message.sender_account == self.owner, "Owner already set"
-
-    @gl.public.write
-    def update_zone_gb(self):
-        """Update Great Britain zone from UK Carbon Intensity API (no auth, no rate limit)."""
-        api_url = "https://api.carbonintensity.org.uk/intensity"
-
-        def leader_fn():
-            response = gl.nondet.web.get(api_url)
-            data = json.loads(response.body.decode("utf-8"))
-            entry = data["data"][0]
-            return {
-                "carbon": entry["intensity"]["actual"] if entry["intensity"]["actual"] is not None else entry["intensity"]["forecast"],
-                "index": entry["intensity"]["index"],
-                "zone": "GB"
-            }
-
-        def validator_fn(leader_result) -> bool:
-            if not isinstance(leader_result, gl.vm.Return):
-                return False
-            my_response = gl.nondet.web.get(api_url)
-            my_data = json.loads(my_response.body.decode("utf-8"))
-            my_entry = my_data["data"][0]
-            my_carbon = my_entry["intensity"]["actual"] if my_entry["intensity"]["actual"] is not None else my_entry["intensity"]["forecast"]
-            leader_carbon = leader_result.calldata["carbon"]
-            if leader_carbon == 0:
-                return my_carbon == 0
-            return abs(leader_carbon - my_carbon) / abs(leader_carbon) <= 0.05
-
-        result = gl.vm.run_nondet_unsafe(leader_fn, validator_fn)
-        self.zone_carbon["GB"] = u32(result["carbon"])
-        self.zone_intensity_index["GB"] = result["index"]
-        # UK API doesn't provide renewable %, estimate from intensity index
-        index_to_renewable = {"very low": 85, "low": 65, "moderate": 45, "high": 25, "very high": 10}
-        self.zone_renewable["GB"] = u32(index_to_renewable.get(result["index"], 40))
 
     @gl.public.write
     def update_zone_windfall(self, zone_id: str):
@@ -145,38 +111,8 @@ class GridOracle(gl.Contract):
 
     @gl.public.write
     def update_all_live(self):
-        """Update GB and DE from live APIs. FI and US use hardcoded fallback.
+        """Update DE from live Energy-Charts API. FI and US use hardcoded values.
         Call this to refresh oracle with real-world data."""
-        # GB: UK Carbon Intensity API
-        gb_url = "https://api.carbonintensity.org.uk/intensity"
-
-        def gb_leader():
-            response = gl.nondet.web.get(gb_url)
-            data = json.loads(response.body.decode("utf-8"))
-            entry = data["data"][0]
-            carbon = entry["intensity"]["actual"] if entry["intensity"]["actual"] is not None else entry["intensity"]["forecast"]
-            index = entry["intensity"]["index"]
-            index_to_renewable = {"very low": 85, "low": 65, "moderate": 45, "high": 25, "very high": 10}
-            return {"carbon": carbon, "index": index, "renewable": index_to_renewable.get(index, 40)}
-
-        def gb_validator(leader_result) -> bool:
-            if not isinstance(leader_result, gl.vm.Return):
-                return False
-            my_response = gl.nondet.web.get(gb_url)
-            my_data = json.loads(my_response.body.decode("utf-8"))
-            my_entry = my_data["data"][0]
-            my_carbon = my_entry["intensity"]["actual"] if my_entry["intensity"]["actual"] is not None else my_entry["intensity"]["forecast"]
-            leader_carbon = leader_result.calldata["carbon"]
-            if leader_carbon == 0:
-                return my_carbon == 0
-            return abs(leader_carbon - my_carbon) / abs(leader_carbon) <= 0.05
-
-        gb = gl.vm.run_nondet_unsafe(gb_leader, gb_validator)
-        self.zone_carbon["GB"] = u32(gb["carbon"])
-        self.zone_renewable["GB"] = u32(gb["renewable"])
-        self.zone_intensity_index["GB"] = gb["index"]
-
-        # DE: Energy-Charts API
         de_url = "https://api.energy-charts.info/public_power?country=de&time_step=hourly"
 
         def de_leader():

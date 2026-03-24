@@ -10,7 +10,7 @@ class SpatialRouter(gl.Contract):
     grid_oracle_addr: Address
     routing_history: DynArray[str]
 
-    VALID_ZONES = {"FI", "DE", "US", "GB"}
+    VALID_ZONES = {"FI", "DE", "US"}
 
     @gl.public.write
     def set_owner(self):
@@ -58,7 +58,7 @@ Respond ONLY with valid JSON: {{"zone": "XX", "reasoning": "one sentence"}}"""
                 data = json.loads(leader_result.calldata)
                 if "zone" not in data or "reasoning" not in data:
                     return False
-                if data["zone"] not in {"FI", "DE", "US", "GB"}:
+                if data["zone"] not in {"FI", "DE", "US"}:
                     return False
 
                 # GENUINE SUBJECTIVE CONSENSUS: validator independently reasons
