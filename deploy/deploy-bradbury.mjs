@@ -65,13 +65,12 @@ async function callWrite(addr, fn, args, label) {
 }
 
 async function main() {
-  // Step 1: Deploy GridOracle
-  const oracleAddr = await deployContract('GridOracle', resolve(root, 'contracts/grid_oracle.py'));
+  // Step 1: Deploy GridOracle (or reuse existing)
+  const EXISTING_ORACLE = process.env.ORACLE_ADDR || '';
+  const oracleAddr = EXISTING_ORACLE || await deployContract('GridOracle', resolve(root, 'contracts/grid_oracle.py'));
+  if (EXISTING_ORACLE) console.log(`Reusing GridOracle: ${EXISTING_ORACLE}`);
 
-  // Step 2: Claim ownership
-  await callWrite(oracleAddr, 'set_owner', [], 'Claiming GridOracle ownership');
-
-  // Step 3: Seed zone data
+  // Step 2: Seed zone data
   console.log('\nSeeding zones...');
   const zones = [
     ['FI', 45, 82],
@@ -89,10 +88,7 @@ async function main() {
   // Step 5: Deploy SpatialRouterSimple
   const routerAddr = await deployContract('SpatialRouterSimple', resolve(root, 'contracts/spatial_router_simple.py'));
 
-  // Step 6: Claim router ownership
-  await callWrite(routerAddr, 'set_owner', [], 'Claiming SpatialRouter ownership');
-
-  // Step 7: Test routing
+  // Step 6: Test routing
   console.log('\nTest routing...');
   const tx = await client.writeContract({
     address: routerAddr, functionName: 'route_simple', args: ['greenest possible'], value: BigInt(0),

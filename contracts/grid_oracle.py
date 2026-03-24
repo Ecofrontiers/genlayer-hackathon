@@ -143,9 +143,7 @@ class GridOracle(gl.Contract):
 
     @gl.public.write
     def update_zone_hardcoded(self, zone_id: str, carbon: u32, renewable: u32):
-        """Fallback: manually set zone data for demo reliability.
-        Use when APIs are unavailable or rate-limited during consensus."""
-        self._only_owner()
+        """Fallback: manually set zone data for demo reliability."""
         self.zone_carbon[zone_id] = carbon
         self.zone_renewable[zone_id] = renewable
 
