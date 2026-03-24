@@ -218,11 +218,10 @@ tailwind.config = {
               <p id="result-savings-detail" class="text-[10px] text-body mt-1"></p>
             </div>
             <div class="mb-3">
-              <span class="text-[10px] text-body uppercase tracking-wider">Subjective Consensus</span>
-              <div class="w-full bg-warm rounded-full h-1.5 mt-1">
-                <div id="consensus-bar" class="bg-sage h-1.5 rounded-full transition-all duration-1000" style="width: 0%"></div>
-              </div>
-              <p class="text-[10px] text-sage mt-1">Validators independently re-reasoned and assessed defensibility</p>
+              <span class="text-[10px] text-body uppercase tracking-wider">Validator Consensus</span>
+              <div id="validator-votes" class="flex gap-1 mt-2"></div>
+              <p id="consensus-summary" class="text-[10px] text-sage mt-1"></p>
+              <p id="consensus-time" class="text-[10px] text-body mt-0.5"></p>
             </div>
             <div class="border-t border-border pt-3">
               <span class="text-[10px] text-body uppercase tracking-wider">Tx Hash</span>
@@ -286,9 +285,8 @@ tailwind.config = {
           <span class="text-[9px] text-body">gCO2/kWh</span>
         </div>
         <div class="bg-warm rounded-lg p-3 text-center">
-          <span class="text-[10px] text-body uppercase tracking-wider">Renewable</span>
-          <p id="modal-renewable" class="text-lg font-mono font-bold text-sage mt-1"></p>
-          <span class="text-[9px] text-body">% of generation</span>
+          <span class="text-[10px] text-body uppercase tracking-wider">Cost &amp; Latency</span>
+          <p id="modal-renewable" class="text-sm font-mono font-bold text-sage mt-1"></p>
         </div>
       </div>
       <div id="modal-savings" class="hidden bg-sage/10 border border-sage/20 rounded-lg p-3">
@@ -522,6 +520,50 @@ function showSavings(prefix, zone) {
     `Routing to ${s.chosen} (${s.chosenCarbon} gCO2) instead of ${s.worst} (${s.worstCarbon} gCO2) saves ~${s.gramsPerInference}g CO2 per inference (~0.005 kWh avg).`;
 }
 
+function renderValidatorVotes(receipt) {
+  const container = document.getElementById('validator-votes');
+  const summary = document.getElementById('consensus-summary');
+  const timeEl = document.getElementById('consensus-time');
+  if (!receipt?.lastRound) {
+    container.innerHTML = '<span class="text-[10px] text-body">Consensus data unavailable</span>';
+    return;
+  }
+  const round = receipt.lastRound;
+  const validators = round.roundValidators || [];
+  const votes = round.validatorVotesName || [];
+  const leader = receipt.lastLeader;
+
+  const voteColors = { AGREE: 'bg-sage', DISAGREE: 'bg-coral', TIMEOUT: 'bg-border' };
+  const voteIcons = { AGREE: '&#10003;', DISAGREE: '&#10007;', TIMEOUT: '&#8943;' };
+
+  container.innerHTML = validators.map((addr, i) => {
+    const vote = votes[i] || 'UNKNOWN';
+    const isLeader = addr.toLowerCase() === (leader || '').toLowerCase();
+    const color = voteColors[vote] || 'bg-border';
+    const icon = voteIcons[vote] || '?';
+    return `<div class="flex flex-col items-center gap-0.5" title="${addr}\n${vote}${isLeader ? ' (Leader)' : ''}">
+      <div class="w-7 h-7 rounded-full ${color} flex items-center justify-center text-white text-xs font-bold ${isLeader ? 'ring-2 ring-heading' : ''}">${icon}</div>
+      <span class="text-[8px] font-mono text-body">${isLeader ? 'L' : 'V'}${i+1}</span>
+    </div>`;
+  }).join('');
+
+  const agreeCount = votes.filter(v => v === 'AGREE' || v === 'DISAGREE').length;
+  // In GenLayer, DISAGREE means validator disagreed with leader but result was accepted by majority hash match
+  const resultHashes = round.validatorResultHash || [];
+  const hashCounts = {};
+  resultHashes.forEach(h => { hashCounts[h] = (hashCounts[h] || 0) + 1; });
+  const majorityCount = Math.max(...Object.values(hashCounts));
+  const totalVoters = validators.length;
+  const timeouts = votes.filter(v => v === 'TIMEOUT').length;
+
+  summary.textContent = `${majorityCount}/${totalVoters} validators reached same result${timeouts ? `, ${timeouts} timed out` : ''}`;
+
+  if (receipt.createdTimestamp && receipt.lastVoteTimestamp) {
+    const seconds = parseInt(receipt.lastVoteTimestamp) - parseInt(receipt.createdTimestamp);
+    timeEl.textContent = `Consensus reached in ${seconds}s across ${totalVoters} validators`;
+  }
+}
+
 window.setPreset = function(lat, reas, carb) {
   document.getElementById('slider-latency').value = lat;
   document.getElementById('slider-reasoning').value = reas;
@@ -554,12 +596,13 @@ window.routeInference = async function() {
     if (txUrl) { txLink.href = txUrl; txLink.classList.remove('hidden'); }
     else { txLink.classList.add('hidden'); }
 
-    await client.waitForTransactionReceipt({ hash: txHash, retries: 120, interval: 5000 });
+    const txReceipt = await client.waitForTransactionReceipt({ hash: txHash, retries: 120, interval: 5000 });
+    renderValidatorVotes(txReceipt);
     const historyRaw = await client.readContract({ address: net().router, functionName: 'get_history', args: [] });
     const history = JSON.parse(historyRaw);
     const latest = history[history.length - 1] || {};
     const zone = latest.zone || 'FI';
-    const zd = latest.zone_data || ZONES[zone] || {};
+    const zd = latest.node_data || latest.zone_data || {};
 
     document.getElementById('no-result').classList.add('hidden');
     document.getElementById('result-display').classList.remove('hidden');
@@ -571,7 +614,7 @@ window.routeInference = async function() {
     document.getElementById('result-carbon').textContent = `${zd.carbon_gco2_kwh || z.carbon || '?'} gCO2`;
     document.getElementById('result-renewable').textContent = `$${zd.cost_per_1k_tokens || z.cost || '?'}/1k · ${zd.latency_ms || z.latency || '?'}ms`;
     showSavings('result', zone);
-    setTimeout(() => { document.getElementById('consensus-bar').style.width = '100%'; }, 100);
+    // consensus now rendered by renderValidatorVotes
     highlightZone(zone);
     await loadHistory();
   } catch (e) {
@@ -603,14 +646,15 @@ window.openTxModal = function(idx) {
   const h = window._history?.[idx];
   if (!h) return;
   const zone = h.zone || '?';
-  const zd = h.zone_data || ZONES[zone] || {};
+  const nd = h.node_data || h.zone_data || {};
+  const zn = ZONES[zone] || {};
   document.getElementById('modal-zone').textContent = zone;
-  document.getElementById('modal-zone-name').textContent = ZONES[zone]?.name || '';
+  document.getElementById('modal-zone-name').textContent = zn.name || '';
   const p = h.priorities;
   document.getElementById('modal-preferences').textContent = p ? `Latency: ${p.latency}/10  Reasoning: ${p.reasoning}/10  Carbon: ${p.carbon}/10` : (h.preferences || 'N/A');
   document.getElementById('modal-reasoning').textContent = h.reasoning || '';
-  document.getElementById('modal-carbon').textContent = zd.carbon || ZONES[zone]?.carbon || '?';
-  document.getElementById('modal-renewable').textContent = (zd.renewable || ZONES[zone]?.renewable || '?') + '%';
+  document.getElementById('modal-carbon').textContent = nd.carbon_gco2_kwh || zn.carbon || '?';
+  document.getElementById('modal-renewable').textContent = `$${nd.cost_per_1k_tokens || zn.cost || '?'}/1k · ${nd.latency_ms || zn.latency || '?'}ms`;
   document.getElementById('modal-contract').textContent = net().router;
   const addrUrl = explorerAddrUrl(net().router);
   const contractLink = document.getElementById('modal-contract-link');
