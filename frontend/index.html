@@ -93,7 +93,12 @@ tailwind.config = {
 
     <!-- Left: Map + Zone Cards -->
     <div class="col-span-5">
-      <h2 class="text-xs font-bold text-sage tracking-widest uppercase mb-3">Energy Zones</h2>
+      <div class="flex items-center justify-between mb-3">
+        <h2 class="text-xs font-bold text-sage tracking-widest uppercase">Energy Zones</h2>
+        <button id="refresh-btn" onclick="refreshLiveData()" class="text-[9px] px-2 py-0.5 rounded border border-sage text-sage hover:bg-sage hover:text-white transition-colors">
+          Refresh Live Data
+        </button>
+      </div>
       <div id="map" class="rounded-lg border border-border overflow-hidden" style="height: 320px;"></div>
       <div class="grid grid-cols-3 gap-2 mt-2">
         <div id="card-FI" class="bg-white border border-border rounded-lg p-2.5 text-center cursor-pointer hover:border-sage transition-colors">
@@ -424,6 +429,28 @@ async function loadZoneData() {
     }
   } catch (e) { console.error('Zone data load failed:', e); }
 }
+
+window.refreshLiveData = async function() {
+  if (!client || !net().oracle) { alert('No oracle on ' + net().name); return; }
+  const btn = document.getElementById('refresh-btn');
+  btn.textContent = 'Fetching live data...';
+  btn.disabled = true;
+  try {
+    const tx = await client.writeContract({
+      address: net().oracle, functionName: 'update_all_live', args: [], value: BigInt(0),
+    });
+    btn.textContent = 'Validators reaching consensus...';
+    await client.waitForTransactionReceipt({ hash: tx, retries: 120, interval: 5000 });
+    await loadZoneData();
+    btn.textContent = 'Updated!';
+    setTimeout(() => { btn.textContent = 'Refresh Live Data'; btn.disabled = false; }, 2000);
+  } catch (e) {
+    console.error('Live data refresh failed:', e);
+    btn.textContent = 'Refresh Live Data';
+    btn.disabled = false;
+    alert('Live data refresh failed: ' + e.message);
+  }
+};
 
 window.toggleCustomPrefs = function() {
   const sel = document.getElementById('preferences-select');

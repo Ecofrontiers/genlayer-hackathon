@@ -101,6 +101,111 @@ class GridOracle(gl.Contract):
         self.zone_renewable[zone_id] = u32(result["renewable"])
 
     @gl.public.write
+    def update_zone_de(self):
+        """Update Germany zone from Energy-Charts API (free, no auth).
+        Returns current renewable share of load for Germany."""
+        api_url = "https://api.energy-charts.info/public_power?country=de&time_step=hourly"
+
+        def leader_fn():
+            response = gl.nondet.web.get(api_url)
+            data = json.loads(response.body.decode("utf-8"))
+            # Get the most recent hour's renewable share
+            renewable_shares = data.get("Renewable share of load", [])
+            # Filter out None values from the end
+            valid = [v for v in renewable_shares if v is not None]
+            renewable_pct = int(valid[-1]) if valid else 55
+
+            # Estimate carbon from renewable %
+            # Germany baseline ~400 gCO2 at 0% renewable, ~50 at 100%
+            carbon = max(20, int(400 - (renewable_pct * 3.5)))
+
+            return {
+                "carbon": carbon,
+                "renewable": min(100, max(0, renewable_pct)),
+                "zone": "DE"
+            }
+
+        def validator_fn(leader_result) -> bool:
+            if not isinstance(leader_result, gl.vm.Return):
+                return False
+            my_response = gl.nondet.web.get(api_url)
+            my_data = json.loads(my_response.body.decode("utf-8"))
+            my_shares = my_data.get("Renewable share of load", [])
+            my_valid = [v for v in my_shares if v is not None]
+            my_renewable = int(my_valid[-1]) if my_valid else 55
+            leader_renewable = leader_result.calldata["renewable"]
+            # 10% tolerance on renewable share (it updates hourly)
+            if leader_renewable == 0:
+                return my_renewable == 0
+            return abs(leader_renewable - my_renewable) / abs(leader_renewable) <= 0.10
+
+        result = gl.vm.run_nondet_unsafe(leader_fn, validator_fn)
+        self.zone_carbon["DE"] = u32(result["carbon"])
+        self.zone_renewable["DE"] = u32(result["renewable"])
+
+    @gl.public.write
+    def update_all_live(self):
+        """Update GB and DE from live APIs. FI and US use hardcoded fallback.
+        Call this to refresh oracle with real-world data."""
+        # GB: UK Carbon Intensity API
+        gb_url = "https://api.carbonintensity.org.uk/intensity"
+
+        def gb_leader():
+            response = gl.nondet.web.get(gb_url)
+            data = json.loads(response.body.decode("utf-8"))
+            entry = data["data"][0]
+            carbon = entry["intensity"]["actual"] if entry["intensity"]["actual"] is not None else entry["intensity"]["forecast"]
+            index = entry["intensity"]["index"]
+            index_to_renewable = {"very low": 85, "low": 65, "moderate": 45, "high": 25, "very high": 10}
+            return {"carbon": carbon, "index": index, "renewable": index_to_renewable.get(index, 40)}
+
+        def gb_validator(leader_result) -> bool:
+            if not isinstance(leader_result, gl.vm.Return):
+                return False
+            my_response = gl.nondet.web.get(gb_url)
+            my_data = json.loads(my_response.body.decode("utf-8"))
+            my_entry = my_data["data"][0]
+            my_carbon = my_entry["intensity"]["actual"] if my_entry["intensity"]["actual"] is not None else my_entry["intensity"]["forecast"]
+            leader_carbon = leader_result.calldata["carbon"]
+            if leader_carbon == 0:
+                return my_carbon == 0
+            return abs(leader_carbon - my_carbon) / abs(leader_carbon) <= 0.05
+
+        gb = gl.vm.run_nondet_unsafe(gb_leader, gb_validator)
+        self.zone_carbon["GB"] = u32(gb["carbon"])
+        self.zone_renewable["GB"] = u32(gb["renewable"])
+        self.zone_intensity_index["GB"] = gb["index"]
+
+        # DE: Energy-Charts API
+        de_url = "https://api.energy-charts.info/public_power?country=de&time_step=hourly"
+
+        def de_leader():
+            response = gl.nondet.web.get(de_url)
+            data = json.loads(response.body.decode("utf-8"))
+            shares = data.get("Renewable share of load", [])
+            valid = [v for v in shares if v is not None]
+            renewable_pct = int(valid[-1]) if valid else 55
+            carbon = max(20, int(400 - (renewable_pct * 3.5)))
+            return {"carbon": carbon, "renewable": min(100, max(0, renewable_pct))}
+
+        def de_validator(leader_result) -> bool:
+            if not isinstance(leader_result, gl.vm.Return):
+                return False
+            my_response = gl.nondet.web.get(de_url)
+            my_data = json.loads(my_response.body.decode("utf-8"))
+            my_shares = my_data.get("Renewable share of load", [])
+            my_valid = [v for v in my_shares if v is not None]
+            my_renewable = int(my_valid[-1]) if my_valid else 55
+            leader_renewable = leader_result.calldata["renewable"]
+            if leader_renewable == 0:
+                return my_renewable == 0
+            return abs(leader_renewable - my_renewable) / abs(leader_renewable) <= 0.10
+
+        de = gl.vm.run_nondet_unsafe(de_leader, de_validator)
+        self.zone_carbon["DE"] = u32(de["carbon"])
+        self.zone_renewable["DE"] = u32(de["renewable"])
+
+    @gl.public.write
     def update_zone_hardcoded(self, zone_id: str, carbon: u32, renewable: u32):
         """Fallback: manually set zone data for demo reliability.
         Use when APIs are unavailable or rate-limited during consensus."""
