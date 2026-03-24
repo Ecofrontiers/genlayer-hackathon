@@ -4,9 +4,9 @@ import json
 
 
 class SpatialRouterSimple(gl.Contract):
-    """LLM-powered subjective routing with genuine validator re-reasoning.
-    Validators independently assess whether the leader's routing choice is
-    defensible — not just structurally valid. This is real subjective consensus."""
+    """Production inference router with genuine subjective consensus.
+    Routes based on model capability, cost, latency, and carbon impact.
+    Validators independently re-reason about defensibility."""
 
     owner: Address
     routing_history: DynArray[str]
@@ -22,31 +22,62 @@ class SpatialRouterSimple(gl.Contract):
             assert gl.message.sender_account == self.owner, "Owner already set"
 
     @gl.public.write
-    def route_simple(self, preferences: str) -> str:
+    def route_inference(self, prompt: str, preferences: str) -> str:
         assert len(preferences) < 1000, "Preferences too long"
+        assert len(prompt) < 10000, "Prompt too long"
 
-        zone_data = {
-            "FI": {"carbon": 45, "renewable": 82, "location": "Helsinki"},
-            "DE": {"carbon": 302, "renewable": 55, "location": "Nuremberg"},
-            "US": {"carbon": 420, "renewable": 22, "location": "Ashburn, VA"}
+        nodes = {
+            "FI": {
+                "location": "Helsinki",
+                "model": "DeepSeek V3",
+                "model_strengths": "code, math, structured output",
+                "cost_per_1k_tokens": 0.0004,
+                "latency_ms": 145,
+                "carbon_gco2_kwh": 45,
+                "renewable_pct": 82
+            },
+            "DE": {
+                "location": "Nuremberg",
+                "model": "Llama 3.3 70B",
+                "model_strengths": "general purpose, multilingual, fast",
+                "cost_per_1k_tokens": 0.0008,
+                "latency_ms": 89,
+                "carbon_gco2_kwh": 302,
+                "renewable_pct": 55
+            },
+            "US": {
+                "location": "Ashburn, VA",
+                "model": "Claude Sonnet 4",
+                "model_strengths": "reasoning, analysis, writing, complex tasks",
+                "cost_per_1k_tokens": 0.003,
+                "latency_ms": 45,
+                "carbon_gco2_kwh": 420,
+                "renewable_pct": 22
+            }
         }
 
-        zone_data_str = json.dumps(zone_data)
+        nodes_str = json.dumps(nodes)
 
         def leader_fn():
             result = gl.nondet.exec_prompt(
-                f"""You are a spatial inference router. Given these energy zone conditions:
+                f"""You are an inference router. You must select which node should handle this request.
 
-{zone_data_str}
+AVAILABLE NODES:
+{nodes_str}
 
-And this agent's preferences: "{preferences}"
+AGENT'S TASK: "{prompt}"
 
-Select the best zone for routing AI inference. Consider:
-- Carbon intensity (lower = greener)
-- Renewable percentage (higher = greener)
-- The agent's stated priority
+AGENT'S ROUTING PREFERENCES: "{preferences}"
 
-Respond ONLY with valid JSON: {{"zone": "XX", "reasoning": "one clear sentence explaining your choice"}}"""
+Select the best node by weighing:
+1. Model fit — does the model's strengths match the task?
+2. Cost — per 1k tokens (lower = cheaper)
+3. Latency — response time in ms (lower = faster)
+4. Carbon — gCO2/kWh of the zone's grid (lower = greener)
+
+The agent's preferences tell you how to weigh these factors.
+
+Respond ONLY with valid JSON: {{"zone": "XX", "model": "model name", "reasoning": "one sentence explaining the tradeoff you made"}}"""
             )
             return result
 
@@ -60,19 +91,18 @@ Respond ONLY with valid JSON: {{"zone": "XX", "reasoning": "one clear sentence e
                 if data["zone"] not in {"FI", "DE", "US"}:
                     return False
 
-                # GENUINE SUBJECTIVE CONSENSUS: validator independently reasons
-                # about whether the leader's choice is defensible
                 assessment = gl.nondet.exec_prompt(
-                    f"""A routing system chose zone {data["zone"]} for an agent with preferences "{preferences}".
+                    f"""An inference router chose {data.get("model", "unknown")} in zone {data["zone"]} for this task:
 
-Zone data: {zone_data_str}
+Task: "{prompt}"
+Preferences: "{preferences}"
+Reasoning: "{data["reasoning"]}"
 
-The system's reasoning: "{data["reasoning"]}"
+Available nodes: {nodes_str}
 
-Is this a defensible routing choice given the agent's preferences and the zone data?
-Consider whether a reasonable person could reach this conclusion, even if you might choose differently.
+Is this a defensible routing choice? Consider whether the model fits the task, and whether the cost/latency/carbon tradeoff respects the agent's preferences.
 
-Reply with ONLY "YES" or "NO" followed by one sentence explaining why."""
+Reply with ONLY "YES" or "NO" followed by one sentence."""
                 )
                 return "YES" in assessment.upper()
             except Exception:
@@ -80,7 +110,8 @@ Reply with ONLY "YES" or "NO" followed by one sentence explaining why."""
 
         routing = json.loads(gl.vm.run_nondet_unsafe(leader_fn, validator_fn))
         routing["preferences"] = preferences
-        routing["zone_data"] = zone_data.get(routing.get("zone", "FI"), {})
+        routing["prompt_preview"] = prompt[:100]
+        routing["node_data"] = nodes.get(routing.get("zone", "FI"), {})
         self.routing_history.append(json.dumps(routing))
         return json.dumps(routing)
 

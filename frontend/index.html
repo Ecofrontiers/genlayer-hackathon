@@ -103,24 +103,24 @@ tailwind.config = {
       <div class="grid grid-cols-3 gap-2 mt-2">
         <div id="card-FI" class="bg-white border border-border rounded-lg p-2.5 text-center cursor-pointer hover:border-sage transition-colors">
           <div class="text-xs font-bold text-heading">FI</div>
-          <div class="text-[9px] text-body">Helsinki</div>
-          <div id="carbon-FI" class="text-lg font-mono font-bold text-sage mt-0.5">--</div>
-          <div class="text-[9px] text-body">gCO2/kWh</div>
-          <div class="text-[9px] text-body">Renew: <span id="renewable-FI">--</span>%</div>
+          <div class="text-[8px] font-mono text-sage">DeepSeek V3</div>
+          <div id="carbon-FI" class="text-lg font-mono font-bold text-sage mt-0.5">45</div>
+          <div class="text-[9px] text-body">gCO2 · $0.0004/1k</div>
+          <div class="text-[9px] text-body">145ms · <span id="renewable-FI">82</span>% renew</div>
         </div>
         <div id="card-DE" class="bg-white border border-border rounded-lg p-2.5 text-center cursor-pointer hover:border-coral transition-colors">
           <div class="text-xs font-bold text-heading">DE</div>
-          <div class="text-[9px] text-body">Nuremberg</div>
-          <div id="carbon-DE" class="text-lg font-mono font-bold text-coral mt-0.5">--</div>
-          <div class="text-[9px] text-body">gCO2/kWh</div>
-          <div class="text-[9px] text-body">Renew: <span id="renewable-DE">--</span>%</div>
+          <div class="text-[8px] font-mono text-body">Llama 3.3 70B</div>
+          <div id="carbon-DE" class="text-lg font-mono font-bold text-coral mt-0.5">302</div>
+          <div class="text-[9px] text-body">gCO2 · $0.0008/1k</div>
+          <div class="text-[9px] text-body">89ms · <span id="renewable-DE">55</span>% renew</div>
         </div>
         <div id="card-US" class="bg-white border border-border rounded-lg p-2.5 text-center cursor-pointer hover:border-coral transition-colors">
           <div class="text-xs font-bold text-heading">US</div>
-          <div class="text-[9px] text-body">Ashburn</div>
-          <div id="carbon-US" class="text-lg font-mono font-bold text-coral mt-0.5">--</div>
-          <div class="text-[9px] text-body">gCO2/kWh</div>
-          <div class="text-[9px] text-body">Renew: <span id="renewable-US">--</span>%</div>
+          <div class="text-[8px] font-mono text-body">Claude Sonnet 4</div>
+          <div id="carbon-US" class="text-lg font-mono font-bold text-coral mt-0.5">420</div>
+          <div class="text-[9px] text-body">gCO2 · $0.003/1k</div>
+          <div class="text-[9px] text-body">45ms · <span id="renewable-US">22</span>% renew</div>
         </div>
       </div>
     </div>
@@ -133,9 +133,12 @@ tailwind.config = {
         <select id="preferences-select" onchange="toggleCustomPrefs()"
                 class="w-full border border-border rounded px-3 py-2 text-sm text-heading bg-bg focus:outline-none focus:border-sage">
           <option value="greenest possible">Greenest possible</option>
-          <option value="cheapest">Cheapest</option>
+          <option value="cheapest inference">Cheapest inference</option>
+          <option value="fastest response">Fastest response</option>
+          <option value="best quality for reasoning tasks">Best quality</option>
           <option value="green but fast">Green but fast</option>
-          <option value="balanced">Balanced</option>
+          <option value="cheap and green">Cheap and green</option>
+          <option value="balanced cost, speed, and carbon">Balanced</option>
           <option value="custom">Custom...</option>
         </select>
         <input id="preferences-custom" type="text" placeholder="Describe your routing preference..."
@@ -172,11 +175,12 @@ tailwind.config = {
             <p class="text-sm text-body opacity-50">Submit a request to see routing reasoning</p>
           </div>
           <div id="result-display" class="hidden">
-            <div class="flex items-baseline gap-2 mb-3">
+            <div class="flex items-baseline gap-2 mb-2">
               <span class="text-xs text-body">Routed to</span>
               <span id="result-zone" class="font-display font-bold text-heading text-2xl"></span>
               <span id="result-zone-name" class="text-xs text-body"></span>
             </div>
+            <div id="result-model" class="text-xs font-mono text-sage mb-3"></div>
             <div class="border-l-2 border-sage pl-3 mb-3">
               <span class="text-[10px] text-body uppercase tracking-wider">LLM Reasoning</span>
               <p id="result-reasoning" class="text-sm text-heading mt-1 leading-relaxed"></p>
@@ -315,14 +319,18 @@ const NETWORKS = {
     name: 'Studionet',
     oracle: '0xB36dE30EE7839cCcfBBFf766C2962Db099cc2259',
     router: '0x95b4eC5aA0a9E7F2d8d6D9720e7ea71b63389004',
-    explorer: null,  // no explorer for studionet
+    explorer: null,
+    routeFn: 'route_simple',  // old contract
+    routeArgs: (prompt, prefs) => [prefs],
   },
   bradbury: {
     chain: testnetBradbury,
     name: 'Bradbury Testnet',
     oracle: '0x941948E5ecf03647D58D7C6A090447c9B6973652',
-    router: '0x8107141C4CC8cB90380d7cB0152ec5713F6afa32',
+    router: '0xCcAB82010fa56AEEA790565862422a5EC58dd9c7',
     explorer: 'https://explorer-bradbury.genlayer.com',
+    routeFn: 'route_inference',
+    routeArgs: (prompt, prefs) => [prompt, prefs],
   },
 };
 
@@ -334,9 +342,9 @@ let client, map, markers = {};
 let lastTxHash = null;
 
 const ZONES = {
-  FI: { name: 'Helsinki, Finland', lng: 24.94, lat: 60.17, color: '#3A5A3E', carbon: 45, renewable: 82 },
-  DE: { name: 'Nuremberg, Germany', lng: 11.08, lat: 49.45, color: '#E07A5F', carbon: 302, renewable: 55 },
-  US: { name: 'Ashburn, Virginia', lng: -77.49, lat: 39.04, color: '#C0392B', carbon: 420, renewable: 22 },
+  FI: { name: 'Helsinki, Finland', lng: 24.94, lat: 60.17, color: '#3A5A3E', carbon: 45, renewable: 82, latency: 145, cost: 0.0004, model: 'DeepSeek V3' },
+  DE: { name: 'Nuremberg, Germany', lng: 11.08, lat: 49.45, color: '#E07A5F', carbon: 302, renewable: 55, latency: 89, cost: 0.0008, model: 'Llama 3.3 70B' },
+  US: { name: 'Ashburn, Virginia', lng: -77.49, lat: 39.04, color: '#C0392B', carbon: 420, renewable: 22, latency: 45, cost: 0.003, model: 'Claude Sonnet 4' },
 };
 
 function net() { return NETWORKS[currentNetwork]; }
@@ -507,6 +515,7 @@ window.routeInference = async function() {
   if (!net().router) { alert('No router deployed on ' + net().name); return; }
   const sel = document.getElementById('preferences-select');
   const preferences = sel.value === 'custom' ? document.getElementById('preferences-custom').value : sel.value;
+  const prompt = document.getElementById('prompt-input').value || 'What is 2+2?';
   if (!preferences) return;
   const btn = document.getElementById('route-btn');
   const loading = document.getElementById('loading-indicator');
@@ -514,7 +523,7 @@ window.routeInference = async function() {
   loading.classList.remove('hidden');
   try {
     const txHash = await client.writeContract({
-      address: net().router, functionName: 'route_simple', args: [preferences], value: BigInt(0),
+      address: net().router, functionName: net().routeFn || 'route_inference', args: (net().routeArgs || ((p, pr) => [p, pr]))(prompt, preferences), value: BigInt(0),
     });
     lastTxHash = txHash;
 
@@ -536,9 +545,11 @@ window.routeInference = async function() {
     document.getElementById('result-display').classList.remove('hidden');
     document.getElementById('result-zone').textContent = zone;
     document.getElementById('result-zone-name').textContent = ZONES[zone]?.name || '';
+    document.getElementById('result-model').textContent = latest.model || ZONES[zone]?.model || '';
     document.getElementById('result-reasoning').textContent = latest.reasoning || 'Consensus reached';
-    document.getElementById('result-carbon').textContent = `${zd.carbon || ZONES[zone]?.carbon || '?'} gCO2/kWh`;
-    document.getElementById('result-renewable').textContent = `${zd.renewable || ZONES[zone]?.renewable || '?'}% renewable`;
+    const z = ZONES[zone] || {};
+    document.getElementById('result-carbon').textContent = `${zd.carbon_gco2_kwh || z.carbon || '?'} gCO2`;
+    document.getElementById('result-renewable').textContent = `$${zd.cost_per_1k_tokens || z.cost || '?'}/1k · ${zd.latency_ms || z.latency || '?'}ms`;
     showSavings('result', zone);
     setTimeout(() => { document.getElementById('consensus-bar').style.width = '100%'; }, 100);
     highlightZone(zone);
