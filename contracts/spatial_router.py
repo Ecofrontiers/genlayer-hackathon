@@ -56,8 +56,25 @@ Respond ONLY with valid JSON: {{"zone": "XX", "reasoning": "one sentence"}}"""
                 return False
             try:
                 data = json.loads(leader_result.calldata)
-                return ("zone" in data and "reasoning" in data
-                        and data["zone"] in {"FI", "DE", "US", "GB"})
+                if "zone" not in data or "reasoning" not in data:
+                    return False
+                if data["zone"] not in {"FI", "DE", "US", "GB"}:
+                    return False
+
+                # GENUINE SUBJECTIVE CONSENSUS: validator independently reasons
+                assessment = gl.nondet.exec_prompt(
+                    f"""A routing system chose zone {data["zone"]} for an agent with preferences "{preferences}".
+
+Zone data: {zone_data_str}
+
+The system's reasoning: "{data["reasoning"]}"
+
+Is this a defensible routing choice given the preferences and zone data?
+Consider whether a reasonable person could reach this conclusion, even if you might choose differently.
+
+Reply with ONLY "YES" or "NO" followed by one sentence explaining why."""
+                )
+                return "YES" in assessment.upper()
             except Exception:
                 return False
 
