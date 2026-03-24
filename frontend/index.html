@@ -310,6 +310,9 @@ const NETWORKS = {
   },
 };
 
+// Deployer key for Bradbury (funded account — hackathon testnet only)
+const BRADBURY_DEPLOYER_KEY = '0xbb419bb04bc41c07f045cacb61f298f947212f4091ec421b3a701994b02a8e3a';
+
 let currentNetwork = 'studionet';
 let client, map, markers = {};
 let lastTxHash = null;
@@ -338,7 +341,8 @@ window.switchNetwork = async function() {
   badge.textContent = 'Connecting';
   badge.className = 'px-2.5 py-1 rounded-full text-[10px] font-medium bg-warm text-body';
   try {
-    const account = createAccount(generatePrivateKey());
+    const pk = currentNetwork === 'bradbury' ? BRADBURY_DEPLOYER_KEY : generatePrivateKey();
+    const account = createAccount(pk);
     client = createClient({ chain: net().chain, account });
     badge.textContent = net().name;
     badge.className = 'px-2.5 py-1 rounded-full text-[10px] font-medium bg-sage text-white';
@@ -397,7 +401,8 @@ function highlightZone(zoneId) {
 async function init() {
   initMap();
   try {
-    const account = createAccount(generatePrivateKey());
+    const pk = currentNetwork === 'bradbury' ? BRADBURY_DEPLOYER_KEY : generatePrivateKey();
+    const account = createAccount(pk);
     client = createClient({ chain: net().chain, account });
     document.getElementById('status-badge').textContent = net().name;
     document.getElementById('status-badge').classList.replace('bg-warm', 'bg-sage');
