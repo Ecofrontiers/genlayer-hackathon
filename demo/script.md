@@ -1,47 +1,81 @@
-# WindfallRouter Demo Script (2 min)
+# WindfallRouter Demo Video — 2 minutes
 
-## Beat 1: Centralized Baseline (30s)
+## Setup Before Recording
 
-[Screen: Windfall dashboard at windfall.ecofrontiers.xyz]
+- Open https://frontend-ecofrontiers.vercel.app
+- Select "Bradbury Testnet" from dropdown
+- Have 3 routing decisions already in history (greenest, cheapest, balanced)
+- Open https://explorer-bradbury.genlayer.com in another tab
+- Pre-authenticate everything, no login screens during recording
 
-"Every AI inference request today routes through a centralized gateway. When Windfall says it routed your query to Finland at 45 grams of CO2 per kilowatt-hour, you get this attestation on Base."
+## Beat 1: The Problem (20s)
 
-[Show EAS attestation on BaseScan]
+[Screen: Windfall dashboard or just the WindfallRouter frontend]
 
-"Signed by us. Our word. Trust us."
+VOICEOVER:
+"When a centralized gateway routes your AI inference to the greenest data center, you trust its word. One server made the decision. One oracle signed the attestation. No way to verify."
 
-## Beat 2: Same Request on GenLayer (50s)
+[Pause on the comparison callout box: "Centralized: Trust us. WindfallRouter: Verify it."]
 
-[Screen: WindfallRouter frontend]
+## Beat 2: The Solution — Live Demo (50s)
 
-"Same request. But now the routing decision happens onchain."
+[Screen: WindfallRouter frontend on Bradbury Testnet. Zone cards showing FI=45, DE=302, US=420]
 
-[Type preferences: "green but fast"]
-[Type prompt: "What is the state of renewable energy in Europe?"]
-[Click Route Inference]
+VOICEOVER:
+"WindfallRouter moves the routing decision onchain. Three energy zones — Finland at 45 grams CO2, Germany at 302, Virginia at 420. Real data from the GridOracle contract."
 
-"Watch what happens. GridOracle fetches live energy data from the UK Carbon Intensity API and Windfall's energy endpoint. Three zones: Great Britain at 263, Germany at 302, Finland at 45 grams CO2."
+[Select "Green but fast" from dropdown. Click Route Inference.]
 
-[Zone cards populate with live data]
+"I'm asking: route my inference somewhere green but fast. Watch what happens."
 
-"Now the SpatialRouter asks the LLM: given these conditions and the agent's preference for green but fast, where should this run?"
+[Loading spinner: "Validators reasoning..."]
 
-[Reasoning panel appears]
+"Five validators — each running a different LLM — independently evaluate this question. The leader picks a zone. Then each validator asks its own LLM: is this choice defensible?"
 
-"Finland. Lowest carbon at 45 grams, 82% renewable. And this wasn't our decision — five validators with different models independently reached the same conclusion through Optimistic Democracy."
+[Result appears: Routed to FI, with reasoning]
 
-[Consensus bar fills]
+"Finland. The leader chose it for the lowest carbon and highest renewable percentage. The validators independently confirmed it's a defensible choice. Not identical reasoning — defensible reasoning."
 
-## Beat 3: Why This Matters (25s)
+[Point to "Subjective Consensus" bar and "View on Explorer" link]
 
-"A centralized gateway can lie about routing. It can claim green while routing dirty. On GenLayer, five validators independently check. The subjective question — how to weigh green versus fast — gets a verified answer through consensus."
+## Beat 3: Different Preferences, Different Decisions (30s)
 
-[Point at provenance history table]
+[Click History tab. Show 3 previous routing decisions.]
 
-"Every routing decision is recorded onchain with the full reasoning chain. Not just where it routed — why."
+VOICEOVER:
+"Now watch what happens with different preferences."
 
-## Beat 4: Close (15s)
+[Click on "cheapest" history row — modal opens]
 
-"Windfall routes spatially on Base today. GenLayer makes it honest. GridOracle is open infrastructure — any contract on GenLayer can query live energy data. SpatialRouter proves that subjective AI decisions can reach trustless consensus."
+"When the agent says cheapest, the validators reason differently. The LLM weighs cost over carbon and may route to a different zone entirely."
 
-[Show README / GitHub link]
+[Close modal. Click on "balanced" row.]
+
+"Balanced gives yet another answer. The point is: this isn't a formula. It's judgment. And that judgment is verified by independent consensus — which is exactly what GenLayer's Optimistic Democracy was built to do."
+
+## Beat 4: What Makes This Real (10s)
+
+[Click "View on Explorer" link — show Bradbury explorer with the tx]
+
+VOICEOVER:
+"Every routing decision lives onchain on Bradbury testnet. The zone, the reasoning, the consensus — all verifiable."
+
+## Beat 5: Close (10s)
+
+[Back to frontend. Show GitHub link in header.]
+
+VOICEOVER:
+"WindfallRouter. Trustless spatial inference routing. Validators don't rubber-stamp — they re-reason. That's subjective consensus on a real economic problem."
+
+[Hold on the WindfallRouter logo for 2 seconds. End.]
+
+---
+
+## Recording Notes
+
+- Use QuickTime screen recording or OBS
+- 1920x1080, no webcam overlay needed
+- Voiceover can be recorded separately and synced
+- Keep mouse movements slow and deliberate
+- If a routing takes too long (>30s), cut and resume after consensus
+- Total target: 1:50–2:00
