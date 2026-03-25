@@ -1,7 +1,6 @@
 # { "Depends": "py-genlayer:1jb45aa8ynh2a9c9xn3b7qqh8sm5q93hwfp7jqmwsfhh8jpz09h6" }
 from genlayer import *
 import json
-import re
 
 
 class SpatialRouter(gl.Contract):
@@ -38,8 +37,8 @@ class SpatialRouter(gl.Contract):
         assert self.grid_oracle_addr != Address(b'\x00' * 20), "Oracle not set"
 
         # Sanitize inputs
-        safe_prompt = re.sub(r'[^\x20-\x7E\n]', '', prompt[:200])
-        safe_prefs = re.sub(r'[^\x20-\x7E]', '', preferences[:200])
+        safe_prompt = ''.join(c for c in prompt[:200] if c == '\n' or (' ' <= c <= '~'))
+        safe_prefs = ''.join(c for c in preferences[:200] if ' ' <= c <= '~')
 
         # Step 1: Read node data from GridOracle (DETERMINISTIC)
         oracle = gl.get_contract_at(self.grid_oracle_addr)
