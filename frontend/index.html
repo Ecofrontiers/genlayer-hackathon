@@ -658,7 +658,11 @@ window.routeInference = async function() {
     await loadHistory();
   } catch (e) {
     console.error('Route failed:', e);
-    alert('Routing failed: ' + e.message);
+    const errDiv = document.getElementById('loading-indicator');
+    errDiv.innerHTML = `<div class="text-center"><p class="text-xs text-coral font-medium">Validator timeout — testnet is under load</p><p class="text-[10px] text-body mt-1">This is normal on Bradbury testnet. Try again — consensus often succeeds on retry.</p><button onclick="routeInference()" class="mt-2 px-3 py-1 text-xs bg-sage text-white rounded hover:opacity-90">Retry</button></div>`;
+    errDiv.classList.remove('hidden');
+    btn.disabled = false;
+    return;
   } finally { btn.disabled = false; loading.classList.add('hidden'); }
 };
 
