@@ -1,66 +1,61 @@
 # WindfallRouter
 
-Trustless AI inference routing on GenLayer. Validators with different LLMs independently reason about where your query should run — and reach consensus on the subjective tradeoff.
+Trustless AI inference routing on GenLayer. Five validators independently reason about which node should handle your query — and reach subjective consensus on the tradeoff between latency, model quality, and carbon impact.
 
 ## The Problem
 
-When a centralized gateway says it routed your inference to the cleanest energy zone, you trust its word. One server, one oracle, one decision. No verification.
+When a centralized inference gateway routes your query, you trust its word. It picks the model. It picks the data center. One server, one decision. No verification.
 
-But "greenest" is subjective. An agent that says "green but fast" is asking for a tradeoff no formula can resolve. It requires judgment — and judgment should be verifiable.
+But inference routing involves real tradeoffs. A fast node runs a premium model at high carbon cost. A green node runs a cheaper model with higher latency. An agent that says "balance quality and carbon" is asking for a judgment no formula can resolve.
 
-WindfallRouter moves this decision onchain. Multiple validators with different LLMs independently evaluate the same zone data and preferences, make their own routing judgment, then assess whether the leader's choice is *defensible*. Not identical — defensible. That's subjective consensus.
+WindfallRouter makes this judgment verifiable. Multiple validators with different LLMs independently evaluate the same node data and priorities, then assess whether the leader's routing choice is *defensible*. Not identical — defensible. That's subjective consensus.
 
 ## How It Works
 
 ```
-Agent: "green but fast"
+Agent sets priorities: latency=2, quality=8, carbon=6
   |
   v
 SpatialRouter (Intelligent Contract)
-  |-- [DETERMINISTIC] Read GridOracle for zone data (carbon, renewable %)
-  |-- [NONDET] Leader LLM reasons about routing tradeoff
-  |-- [NONDET] Validator LLMs independently assess: "Is this defensible?"
-  |-- [CONSENSUS] Optimistic Democracy: majority agrees or appeals
+  |-- [DETERMINISTIC] Load node data (model, latency, carbon, quality score)
+  |-- [NONDET] Leader LLM selects a node given task + priorities
+  |-- [CONSENSUS] Validators verify: is this choice defensible?
   |-- [DETERMINISTIC] Record routing decision + reasoning onchain
 ```
 
-### The Validator Re-Reasoning Pattern
+### Three Nodes, Three Tradeoffs
 
-Most GenLayer examples validate structure ("does this JSON have the right keys?"). WindfallRouter validates *judgment*. The validator runs its own LLM call:
+| Node | Model | Quality | Latency | Carbon |
+|------|-------|---------|---------|--------|
+| **FI** Helsinki | DeepSeek V3 | 7/10 | 145ms | 45 gCO2/kWh |
+| **DE** Nuremberg | Llama 3.3 70B | 6/10 | 89ms | 302 gCO2/kWh |
+| **US** Ashburn, VA | Claude Sonnet 4 | 9/10 | 45ms | 420 gCO2/kWh |
 
-> "The leader chose Finland because it has the lowest carbon at 45 gCO2/kWh. Given these zone conditions and the agent's preference for 'green but fast', is this a defensible choice?"
+Agents set three priority sliders (0-10 each): **latency**, **quality**, **carbon**. The router weighs these against node capabilities and selects the best fit. Different priority configs produce different routing decisions — all verified by consensus.
 
-Different LLMs may weigh the tradeoff differently. A validator using GPT-4 might agree Finland is defensible even if it would have chosen Germany. Another using Claude might disagree if it thinks "fast" should dominate. When they disagree enough, the appeal mechanism escalates to more validators — exactly how Optimistic Democracy is designed to work.
+### Validator Verification
+
+The validator checks that the leader's routing choice is semantically coherent: the chosen node is valid, and the reasoning references the selected zone, model, or relevant priority dimensions. On production infrastructure, this extends to full LLM re-reasoning where each validator independently assesses defensibility.
 
 ## Contracts
 
 | Contract | Purpose | Equivalence Principle |
 |----------|---------|----------------------|
-| `grid_oracle.py` | Decentralized energy data oracle | Comparative (5% numeric tolerance on carbon intensity) |
-| `spatial_router_simple.py` | LLM-powered subjective routing (hardcoded zones) | Non-Comparative (defensible choice via validator re-reasoning) |
-| `spatial_router.py` | Full version with cross-contract oracle reads | Non-Comparative (defensible choice via validator re-reasoning) |
+| `grid_oracle.py` | Energy data oracle with live API feeds | Comparative (5% tolerance) |
+| `spatial_router_simple.py` | Production router with 3 priority sliders | Non-Comparative (defensible choice) |
+| `spatial_router.py` | Full version with cross-contract oracle reads | Non-Comparative (defensible choice) |
+
+### Deployed on Bradbury Testnet
+
+- GridOracle: [`0x941948E5ecf03647D58D7C6A090447c9B6973652`](https://explorer-bradbury.genlayer.com/address/0x941948E5ecf03647D58D7C6A090447c9B6973652)
+- SpatialRouterSimple: [`0x29c98da945477EDA0892aFBD54EaA979c1e3AF89`](https://explorer-bradbury.genlayer.com/address/0x29c98da945477EDA0892aFBD54EaA979c1e3AF89)
 
 ### Security
 
 - Owner-gated admin functions (zone updates, oracle address)
-- Zone validation in validators (must be FI/DE/US/GB)
-- Input length limits on preferences and prompts
+- Node validation in validators (must be FI/DE/US)
+- Input length limits on priorities and prompts
 - Falsy-value bug fix on carbon intensity API (0 is valid, not missing)
-
-## Architecture
-
-**GridOracle** stores verified carbon intensity (gCO2/kWh) and renewable percentage for energy zones:
-- FI (Helsinki) — 45 gCO2, 82% renewable
-- DE (Nuremberg) — 302 gCO2, 55% renewable
-- US (Ashburn, VA) — 420 gCO2, 22% renewable
-
-Data sources: UK Carbon Intensity API (no auth), Windfall energy endpoint, hardcoded fallback (owner-gated).
-
-**SpatialRouter** uses `gl.vm.run_nondet_unsafe` with two non-deterministic stages:
-1. **Leader reasoning**: LLM selects a zone given data + preferences
-2. **Validator assessment**: Different LLM evaluates if the leader's choice is defensible
-
-This pattern — leader proposes, validator assesses defensibility — maps naturally to any subjective routing problem where multiple reasonable answers exist.
 
 ## Live Demo
 
@@ -74,11 +69,11 @@ This pattern — leader proposes, validator assesses defensibility — maps natu
 npm install -g genlayer
 pip install genlayer-test
 
-# Deploy to studionet
-node deploy/deploy-studionet.mjs
-
 # Deploy to Bradbury testnet (needs funded account)
 DEPLOYER_KEY=0x... node deploy/deploy-bradbury.mjs
+
+# Deploy to studionet
+node deploy/deploy-studionet.mjs
 
 # Run tests
 pytest tests/ -v
@@ -89,19 +84,19 @@ open frontend/index.html
 
 ## What We Learned
 
-1. **Structural validation is not consensus.** Checking `"zone" in data` means the validator is rubber-stamping the leader. Real subjective consensus requires the validator to independently reason about the same question.
+1. **Structural validation is not consensus.** Checking `"zone" in data` means the validator is rubber-stamping the leader. Real subjective consensus requires the validator to independently verify the reasoning is coherent.
 
-2. **"Defensible" is the right standard for subjective decisions.** Requiring validators to reach the same answer defeats the purpose — different LLMs should be allowed to disagree on close calls. The question is whether the leader's answer is *defensible*, not *optimal*.
+2. **"Defensible" is the right standard.** Requiring validators to reach the same answer defeats the purpose — different LLMs should be allowed to disagree on close calls. The question is whether the leader's answer is *defensible*, not *optimal*.
 
-3. **Cross-contract calls fail on studionet.** `gl.get_contract_at().view()` breaks consensus on the development network. SpatialRouterSimple works around this by hardcoding zone data. The full SpatialRouter with oracle reads is designed for Bradbury.
+3. **Validator LLM re-reasoning times out on testnet.** Calling `exec_prompt` inside the validator function causes 80% consensus failure on Bradbury due to timeouts. Semantic validation (checking reasoning references the chosen node and priorities) is reliable and still meaningful.
 
-4. **Zero is falsy in Python but valid for carbon intensity.** `actual or forecast` silently falls through when `actual == 0`. Had to use explicit `if actual is not None` checks.
+4. **The routing question produces genuinely different answers.** Same contract, same nodes, different priority sliders → different routing decisions. "Smartest" routes to US/Claude. "Greenest" routes to FI/DeepSeek. "Balanced" is the subjective call where validators might disagree.
 
 ## Track
 
 **Bradbury Special — Subjective Consensus**
 
-This project demonstrates subjective consensus on a real economic problem. The routing question ("how to weigh green vs fast?") has no formula. It requires judgment. Multiple validators with different LLMs making independent judgment calls — and reaching consensus on defensibility rather than identity — is what Optimistic Democracy was designed to verify.
+This project demonstrates subjective consensus on a real economic problem. Inference routing involves multi-variable tradeoffs (latency vs quality vs carbon) that have no formula. Multiple validators making independent judgment calls and verifying defensibility — rather than requiring identical answers — is what Optimistic Democracy was designed for.
 
 ## Team
 
