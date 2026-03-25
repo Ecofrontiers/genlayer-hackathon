@@ -373,8 +373,8 @@ const NETWORKS = {
   bradbury: {
     chain: testnetBradbury,
     name: 'Bradbury Testnet',
-    oracle: '0x941948E5ecf03647D58D7C6A090447c9B6973652',
-    router: '0x29c98da945477EDA0892aFBD54EaA979c1e3AF89',
+    oracle: '0x5B7De435a0da8b55Cb54Fc9C6F05DEA53CBA58C1',
+    router: '0x41df41aC89d8b7114b9435e9E651B6029273253d',
     explorer: 'https://explorer-bradbury.genlayer.com',
     routeFn: 'route_inference',
     routeArgs: (prompt, prefs) => [prompt, prefs],
@@ -389,10 +389,13 @@ let client, map, markers = {};
 let lastTxHash = null;
 
 const ZONES = {
-  FI: { name: 'Helsinki, Finland', lng: 24.94, lat: 60.17, color: '#3A5A3E', carbon: 45, renewable: 82, latency: 145, cost: 0.0004, model: 'DeepSeek V3' },
-  DE: { name: 'Nuremberg, Germany', lng: 11.08, lat: 49.45, color: '#E07A5F', carbon: 302, renewable: 55, latency: 89, cost: 0.0008, model: 'Llama 3.3 70B' },
-  US: { name: 'Ashburn, Virginia', lng: -77.49, lat: 39.04, color: '#C0392B', carbon: 420, renewable: 22, latency: 45, cost: 0.003, model: 'Claude Sonnet 4' },
+  FI: { name: 'Helsinki, Finland', lng: 24.94, lat: 60.17, color: '#3A5A3E' },
+  DE: { name: 'Nuremberg, Germany', lng: 11.08, lat: 49.45, color: '#E07A5F' },
+  US: { name: 'Ashburn, Virginia', lng: -77.49, lat: 39.04, color: '#C0392B' },
 };
+
+// Node data from oracle — populated at runtime
+let oracleNodes = {};
 
 function net() { return NETWORKS[currentNetwork]; }
 function explorerTxUrl(hash) { return net().explorer ? `${net().explorer}/txs/${hash}` : null; }
@@ -417,7 +420,7 @@ window.switchNetwork = async function() {
     client = createClient({ chain: net().chain, account });
     badge.textContent = net().name;
     badge.className = 'px-2.5 py-1 rounded-full text-[10px] font-medium bg-sage text-white';
-    await loadZoneData();
+    await loadNodeData();
     await loadHistory();
   } catch (e) {
     console.error('Network switch failed:', e);
@@ -478,7 +481,7 @@ async function init() {
     document.getElementById('status-badge').textContent = net().name;
     document.getElementById('status-badge').classList.replace('bg-warm', 'bg-sage');
     document.getElementById('status-badge').classList.add('text-white');
-    await loadZoneData();
+    await loadNodeData();
     await loadHistory();
   } catch (e) {
     console.error('Init failed:', e);
@@ -488,22 +491,27 @@ async function init() {
   }
 }
 
-async function loadZoneData() {
-  if (!client || !net().oracle) return;
+async function loadNodeData() {
+  if (!client || !net().router) return;
   try {
-    const raw = await client.readContract({ address: net().oracle, functionName: 'get_zone_data', args: [] });
-    const zones = JSON.parse(raw);
-    for (const [id, data] of Object.entries(zones)) {
+    const raw = await client.readContract({ address: net().router, functionName: 'get_nodes', args: [] });
+    oracleNodes = JSON.parse(raw);
+    for (const [id, data] of Object.entries(oracleNodes)) {
       const cEl = document.getElementById(`carbon-${id}`);
-      const rEl = document.getElementById(`renewable-${id}`);
-      if (cEl) cEl.textContent = data.carbon;
-      if (rEl) rEl.textContent = data.renewable;
-      if (ZONES[id]) { ZONES[id].carbon = data.carbon; ZONES[id].renewable = data.renewable; }
-      const color = data.carbon < 100 ? '#3A5A3E' : data.carbon < 250 ? '#E07A5F' : '#C0392B';
+      if (cEl) cEl.textContent = data.carbon_gco2_kwh || 0;
+      // Update ZONES with oracle data for map/savings calculations
+      if (ZONES[id]) {
+        ZONES[id].carbon = data.carbon_gco2_kwh || 0;
+        ZONES[id].renewable = data.renewable_pct || 0;
+        ZONES[id].model = data.model || '';
+        ZONES[id].latency = data.latency_ms || 0;
+        ZONES[id].quality = data.quality_benchmark || 0;
+      }
+      const color = (data.carbon_gco2_kwh || 999) < 100 ? '#3A5A3E' : (data.carbon_gco2_kwh || 999) < 250 ? '#E07A5F' : '#C0392B';
       if (markers[id]) markers[id].el.style.background = color;
-      if (cEl) { cEl.classList.toggle('text-sage', data.carbon < 100); cEl.classList.toggle('text-coral', data.carbon >= 100); }
+      if (cEl) { cEl.classList.toggle('text-sage', (data.carbon_gco2_kwh||999) < 100); cEl.classList.toggle('text-coral', (data.carbon_gco2_kwh||999) >= 100); }
     }
-  } catch (e) { console.error('Zone data load failed:', e); }
+  } catch (e) { console.error('Node data load failed:', e); }
 }
 
 window.refreshLiveData = async function() {
@@ -517,7 +525,7 @@ window.refreshLiveData = async function() {
     });
     btn.textContent = 'Validators reaching consensus...';
     await client.waitForTransactionReceipt({ hash: tx, retries: 120, interval: 5000 });
-    await loadZoneData();
+    await loadNodeData();
     btn.textContent = 'Updated!';
     setTimeout(() => { btn.textContent = 'Refresh Live Data'; btn.disabled = false; }, 2000);
   } catch (e) {

@@ -4,74 +4,66 @@ import json
 
 
 class SpatialRouterSimple(gl.Contract):
-    """Production inference router with genuine subjective consensus.
-    Routes based on model capability, cost, latency, and carbon impact.
-    Validators independently re-reason about defensibility."""
+    """Inference router with subjective consensus.
+    Node registry is stored onchain (mirrored from GridOracle).
+    Router reads its own storage at routing time — no hardcoded data,
+    no cross-contract calls (which timeout on Bradbury)."""
 
-    owner: Address
+    node_registry: TreeMap[str, str]  # node_id -> JSON node data
+    node_id_list: str  # comma-separated node IDs
     routing_history: DynArray[str]
 
-    VALID_ZONES = {"FI", "DE", "US"}
-
     @gl.public.write
-    def set_owner(self):
-        """Set owner on first call."""
-        if self.owner == Address(b'\x00' * 20):
-            self.owner = gl.message.sender_account
-        else:
-            assert gl.message.sender_account == self.owner, "Owner already set"
+    def register_node(self, node_id: str, node_data_json: str):
+        """Register or update a node. Mirrors GridOracle.register_node."""
+        data = json.loads(node_data_json)
+        assert "model" in data, "model required"
+        self.node_registry[node_id] = node_data_json
+        # Maintain comma-separated ID list
+        existing = self.node_id_list or ""
+        ids = [x for x in existing.split(",") if x]
+        if node_id not in ids:
+            ids.append(node_id)
+        self.node_id_list = ",".join(ids)
 
     @gl.public.write
     def route_inference(self, prompt: str, priorities_json: str) -> str:
-        """Route inference based on three verifiable dimensions.
-        priorities_json: {"latency": 0-10, "quality": 0-10, "carbon": 0-10}"""
+        """Route inference to the best node based on priorities.
+        Reads node data from onchain storage, not from arguments."""
         assert len(prompt) < 10000, "Prompt too long"
+
         priorities = json.loads(priorities_json)
-        latency_priority = priorities.get("latency", 5)
-        quality_priority = priorities.get("quality", 5)
-        carbon_priority = priorities.get("carbon", 5)
+        latency_p = priorities.get("latency", 5)
+        quality_p = priorities.get("quality", 5)
+        carbon_p = priorities.get("carbon", 5)
 
-        nodes = {
-            "FI": {
-                "location": "Helsinki",
-                "model": "DeepSeek V3",
-                "quality_score": 7,
-                "latency_ms": 145,
-                "carbon_gco2_kwh": 45
-            },
-            "DE": {
-                "location": "Nuremberg",
-                "model": "Llama 3.3 70B",
-                "quality_score": 6,
-                "latency_ms": 89,
-                "carbon_gco2_kwh": 302
-            },
-            "US": {
-                "location": "Ashburn, VA",
-                "model": "Claude Sonnet 4",
-                "quality_score": 9,
-                "latency_ms": 45,
-                "carbon_gco2_kwh": 420
-            }
-        }
+        # Build node data from storage
+        id_str = self.node_id_list or ""
+        all_ids = [x for x in id_str.split(",") if x]
+        assert len(all_ids) > 0, "No nodes registered"
 
-        priorities = f"latency={latency_priority}/10, quality={quality_priority}/10, carbon={carbon_priority}/10"
-        nodes_str = json.dumps(nodes)
+        nodes = {}
+        node_summary = []
+        for nid in all_ids:
+            raw = self.node_registry.get(nid, "")
+            if raw:
+                nodes[nid] = json.loads(raw)
+                n = nodes[nid]
+                node_summary.append(f"{nid}: {n.get('model','?')} | quality:{n.get('quality_benchmark','?')} latency:{n.get('latency_ms','?')}ms carbon:{n.get('carbon_gco2_kwh','?')}gCO2")
+
+        node_ids = list(nodes.keys())
+        nodes_compact = "\n".join(node_summary)
+        priorities_str = f"latency={latency_p}/10, quality={quality_p}/10, carbon={carbon_p}/10"
 
         def leader_fn():
             result = gl.nondet.exec_prompt(
-                f"""You are an inference router. Select which node handles this request.
+                f"""Select a node for this task. Priorities: {priorities_str}
 
-NODES:
-{nodes_str}
+{nodes_compact}
 
-TASK: "{prompt}"
+Task: "{prompt[:200]}"
 
-AGENT PRIORITIES: {priorities}
-
-Each node has a model with a reasoning score (higher=smarter), latency (lower=faster), and carbon intensity (lower=greener). The agent's priorities tell you how to weigh these three dimensions.
-
-Respond ONLY with valid JSON: {{"zone": "XX", "model": "model name", "reasoning": "one sentence explaining the tradeoff"}}"""
+Reply JSON: {{"zone":"XX","model":"name","reasoning":"one sentence"}}"""
             )
             return result
 
@@ -80,29 +72,39 @@ Respond ONLY with valid JSON: {{"zone": "XX", "model": "model name", "reasoning"
                 return False
             try:
                 data = json.loads(leader_result.calldata)
-                # Structural: valid JSON with required fields
                 if "zone" not in data or "reasoning" not in data:
                     return False
-                if data["zone"] not in {"FI", "DE", "US"}:
+                if data["zone"] not in nodes:
                     return False
-                # Semantic: reasoning must reference the chosen zone or model
                 reasoning_lower = data["reasoning"].lower()
                 zone = data["zone"]
                 node = nodes[zone]
-                # Check reasoning mentions something relevant
-                has_zone_ref = zone.lower() in reasoning_lower or node["location"].lower() in reasoning_lower
-                has_model_ref = node["model"].lower() in reasoning_lower
-                has_priority_ref = any(w in reasoning_lower for w in ["latency", "quality", "carbon", "fast", "green", "smart", "reason"])
+                has_zone_ref = zone.lower() in reasoning_lower or node.get("location", "").lower() in reasoning_lower
+                has_model_ref = node.get("model", "").lower() in reasoning_lower
+                has_priority_ref = any(w in reasoning_lower for w in ["latency", "quality", "carbon", "fast", "green", "smart", "benchmark"])
                 return has_zone_ref or has_model_ref or has_priority_ref
             except Exception:
                 return False
 
         routing = json.loads(gl.vm.run_nondet_unsafe(leader_fn, validator_fn))
-        routing["priorities"] = {"latency": int(latency_priority), "quality": int(quality_priority), "carbon": int(carbon_priority)}
+        chosen = routing.get("zone", node_ids[0])
+        routing["priorities"] = {"latency": int(latency_p), "quality": int(quality_p), "carbon": int(carbon_p)}
         routing["prompt_preview"] = prompt[:100]
-        routing["node_data"] = nodes.get(routing.get("zone", "FI"), {})
+        routing["node_data"] = nodes.get(chosen, {})
         self.routing_history.append(json.dumps(routing))
         return json.dumps(routing)
+
+    @gl.public.view
+    def get_nodes(self) -> str:
+        """Get all registered nodes."""
+        id_str = self.node_id_list or ""
+        all_ids = [x for x in id_str.split(",") if x]
+        nodes = {}
+        for nid in all_ids:
+            raw = self.node_registry.get(nid, "")
+            if raw:
+                nodes[nid] = json.loads(raw)
+        return json.dumps(nodes)
 
     @gl.public.view
     def get_count(self) -> u32:
