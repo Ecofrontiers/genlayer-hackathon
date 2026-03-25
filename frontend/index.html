@@ -233,7 +233,7 @@ tailwind.config = {
             </div>
             <div id="result-model" class="text-xs font-mono text-sage mb-3"></div>
             <div class="border-l-2 border-sage pl-3 mb-3">
-              <span class="text-[10px] text-body uppercase tracking-wider">LLM Quality</span>
+              <span class="text-[10px] text-body uppercase tracking-wider">LLM Reasoning</span>
               <p id="result-reasoning" class="text-sm text-heading mt-1 leading-relaxed"></p>
             </div>
             <div class="flex gap-2 mb-3">
@@ -306,7 +306,7 @@ tailwind.config = {
         <p id="modal-preferences" class="text-sm text-heading mt-1 bg-warm rounded px-3 py-2 font-mono"></p>
       </div>
       <div class="border-l-2 border-sage pl-3">
-        <span class="text-[10px] text-body uppercase tracking-wider block">LLM Quality</span>
+        <span class="text-[10px] text-body uppercase tracking-wider block">LLM Reasoning</span>
         <p id="modal-reasoning" class="text-sm text-heading mt-1 leading-relaxed"></p>
       </div>
       <div class="grid grid-cols-2 gap-3">
@@ -316,7 +316,7 @@ tailwind.config = {
           <span class="text-[9px] text-body">gCO2/kWh</span>
         </div>
         <div class="bg-warm rounded-lg p-3 text-center">
-          <span class="text-[10px] text-body uppercase tracking-wider">Cost &amp; Latency</span>
+          <span class="text-[10px] text-body uppercase tracking-wider">Latency &amp; Quality</span>
           <p id="modal-renewable" class="text-sm font-mono font-bold text-sage mt-1"></p>
         </div>
       </div>
@@ -651,7 +651,7 @@ window.routeInference = async function() {
     document.getElementById('result-reasoning').textContent = latest.reasoning || 'Consensus reached';
     const z = ZONES[zone] || {};
     document.getElementById('result-carbon').textContent = `${zd.carbon_gco2_kwh || z.carbon || '?'} gCO2`;
-    document.getElementById('result-renewable').textContent = `$${zd.cost_per_1k_tokens || z.cost || '?'}/1k · ${zd.latency_ms || z.latency || '?'}ms`;
+    document.getElementById('result-renewable').textContent = `${zd.latency_ms || z.latency || '?'}ms · quality ${zd.quality_benchmark || z.quality || '?'}`;
     showSavings('result', zone);
     // consensus now rendered by renderValidatorVotes
     highlightZone(zone);
@@ -694,10 +694,10 @@ window.openTxModal = function(idx) {
   document.getElementById('modal-zone').textContent = zone;
   document.getElementById('modal-zone-name').textContent = zn.name || '';
   const p = h.priorities;
-  document.getElementById('modal-preferences').textContent = p ? `Latency: ${p.latency}/10  Quality: ${p.quality || p.reasoning}/10  Carbon: ${p.carbon}/10` : (h.preferences || 'N/A');
+  document.getElementById('modal-preferences').textContent = p ? `Latency: ${p.latency}/10  Quality: ${p.quality !== undefined ? p.quality : (p.reasoning !== undefined ? p.reasoning : '?')}/10  Carbon: ${p.carbon}/10` : (h.preferences || 'N/A');
   document.getElementById('modal-reasoning').textContent = h.reasoning || '';
   document.getElementById('modal-carbon').textContent = nd.carbon_gco2_kwh || zn.carbon || '?';
-  document.getElementById('modal-renewable').textContent = `$${nd.cost_per_1k_tokens || zn.cost || '?'}/1k · ${nd.latency_ms || zn.latency || '?'}ms`;
+  document.getElementById('modal-renewable').textContent = `${nd.latency_ms || zn.latency || '?'}ms · quality ${nd.quality_benchmark || zn.quality || '?'}`;
   document.getElementById('modal-contract').textContent = net().router;
   const addrUrl = explorerAddrUrl(net().router);
   const contractLink = document.getElementById('modal-contract-link');
