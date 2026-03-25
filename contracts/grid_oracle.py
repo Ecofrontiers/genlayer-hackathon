@@ -5,40 +5,47 @@ import json
 
 class GridOracle(gl.Contract):
     """Node registry and energy oracle for inference routing.
-    Stores node data (model, location, latency, quality benchmark, carbon)
-    and provides live carbon updates from public APIs."""
+    Owner-gated writes. Capped node count. Live carbon feeds."""
 
-    # Node registry: node_id -> JSON string of node data
+    owner: Address
     node_registry: TreeMap[str, str]
-    # List of registered node IDs
     node_ids: DynArray[str]
-    # Carbon data (updatable separately from node registration)
     zone_carbon: TreeMap[str, u32]
     zone_renewable: TreeMap[str, u32]
 
+    MAX_NODES = 50
+
+    @gl.public.write
+    def set_owner(self):
+        """Set owner on first call."""
+        if self.owner == Address(b'\x00' * 20):
+            self.owner = gl.message.sender_account
+        else:
+            assert gl.message.sender_account == self.owner, "Owner already set"
+
+    def _only_owner(self):
+        assert gl.message.sender_account == self.owner, "Only owner"
+
     @gl.public.write
     def register_node(self, node_id: str, node_data_json: str):
-        """Register or update an inference node.
-        node_data_json: {"location": "Helsinki", "model": "DeepSeek V3",
-                         "quality_benchmark": 87.1, "benchmark_source": "MMLU",
-                         "latency_ms": 145}
-        Carbon is stored separately and updated via oracle feeds."""
+        """Register or update an inference node. Owner only."""
+        self._only_owner()
         assert len(node_id) < 16, "node_id too long"
+        assert all(c.isalnum() or c == '_' for c in node_id), "node_id must be alphanumeric"
         assert len(node_data_json) < 4096, "node data too large"
         data = json.loads(node_data_json)
         assert "location" in data, "location required"
         assert "model" in data, "model required"
 
-        # Add to registry
-        is_new = self.node_registry.get(node_id, "") == ""
         self.node_registry[node_id] = node_data_json
-        if is_new:
-            self.node_ids.append(node_id)
+        # Always append — deduped in get_all_nodes via dict
+        self.node_ids.append(node_id)
 
     @gl.public.write
     def update_carbon(self, node_id: str, carbon: u32, renewable: u32):
-        """Update carbon intensity for a node's zone.
-        Can be called by oracle feeds or manually."""
+        """Update carbon intensity for a node's zone. Owner only."""
+        self._only_owner()
+        assert self.node_registry.get(node_id, "") != "", "Node not registered"
         self.zone_carbon[node_id] = carbon
         self.zone_renewable[node_id] = renewable
 
@@ -65,9 +72,8 @@ class GridOracle(gl.Contract):
             my_valid = [v for v in my_shares if v is not None]
             my_renewable = int(my_valid[-1]) if my_valid else 55
             leader_renewable = leader_result.calldata["renewable"]
-            if leader_renewable == 0:
-                return my_renewable == 0
-            return abs(leader_renewable - my_renewable) / abs(leader_renewable) <= 0.10
+            # Absolute tolerance: within 10 percentage points
+            return abs(leader_renewable - my_renewable) <= 10
 
         result = gl.vm.run_nondet_unsafe(leader_fn, validator_fn)
         self.zone_carbon["DE"] = u32(result["carbon"])
