@@ -16,6 +16,9 @@ class SpatialRouterSimple(gl.Contract):
     @gl.public.write
     def register_node(self, node_id: str, node_data_json: str):
         """Register or update a node. Mirrors GridOracle.register_node."""
+        assert len(node_id) < 16, "node_id too long"
+        assert "," not in node_id, "node_id cannot contain commas"
+        assert len(node_data_json) < 4096, "node data too large"
         data = json.loads(node_data_json)
         assert "model" in data, "model required"
         self.node_registry[node_id] = node_data_json

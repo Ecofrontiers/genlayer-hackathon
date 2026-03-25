@@ -23,7 +23,8 @@ class GridOracle(gl.Contract):
                          "quality_benchmark": 87.1, "benchmark_source": "MMLU",
                          "latency_ms": 145}
         Carbon is stored separately and updated via oracle feeds."""
-        # Validate JSON
+        assert len(node_id) < 16, "node_id too long"
+        assert len(node_data_json) < 4096, "node data too large"
         data = json.loads(node_data_json)
         assert "location" in data, "location required"
         assert "model" in data, "model required"
