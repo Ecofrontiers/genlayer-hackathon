@@ -2,80 +2,76 @@
 
 ## Setup Before Recording
 
-- Open https://frontend-ecofrontiers.vercel.app
-- Select "Bradbury Testnet" from dropdown
-- Have 3 routing decisions already in history (greenest, cheapest, balanced)
+- Open https://frontend-ecofrontiers.vercel.app (defaults to Bradbury)
+- History should have 3+ entries from different priority configs
 - Open https://explorer-bradbury.genlayer.com in another tab
-- Pre-authenticate everything, no login screens during recording
+- Pre-authenticate everything, no login screens
 
 ## Beat 1: The Problem (20s)
 
-[Screen: Windfall dashboard or just the WindfallRouter frontend]
+[Screen: WindfallRouter frontend, pause on the node cards]
 
 VOICEOVER:
-"When a centralized gateway routes your AI inference to the greenest data center, you trust its word. One server made the decision. One oracle signed the attestation. No way to verify."
+"When a centralized gateway routes your AI inference, you trust its word. It picks the model. It picks the data center. One server, one decision, no verification."
 
-[Pause on the comparison callout box: "Centralized: Trust us. WindfallRouter: Verify it."]
+[Pause on the comparison callout: "Centralized gateway: one server picks the route. Trust us. WindfallRouter: 5 validators independently re-reason. Verify it onchain."]
 
-## Beat 2: The Solution — Live Demo (50s)
+## Beat 2: The Nodes (15s)
 
-[Screen: WindfallRouter frontend on Bradbury Testnet. Zone cards showing FI=45, DE=302, US=420]
-
-VOICEOVER:
-"WindfallRouter moves the routing decision onchain. Three energy zones — Finland at 45 grams CO2, Germany at 302, Virginia at 420. Real data from the GridOracle contract."
-
-[Select "Green but fast" from dropdown. Click Route Inference.]
-
-"I'm asking: route my inference somewhere green but fast. Watch what happens."
-
-[Loading spinner: "Validators reasoning..."]
-
-"Five validators — each running a different LLM — independently evaluate this question. The leader picks a zone. Then each validator asks its own LLM: is this choice defensible?"
-
-[Result appears: Routed to FI, with reasoning]
-
-"Finland. The leader chose it for the lowest carbon and highest renewable percentage. The validators independently confirmed it's a defensible choice. Not identical reasoning — defensible reasoning."
-
-[Point to "Subjective Consensus" bar and "View on Explorer" link]
-
-## Beat 3: Different Preferences, Different Decisions (30s)
-
-[Click History tab. Show 3 previous routing decisions.]
+[Point to the 3 node cards: FI/DeepSeek, DE/Llama, US/Claude]
 
 VOICEOVER:
-"Now watch what happens with different preferences."
+"Three inference nodes. Finland runs DeepSeek — cheapest, greenest at 45 grams CO2, but highest latency. Germany runs Llama — balanced. Virginia runs Claude Sonnet — fastest, smartest, but dirtiest at 420 grams CO2."
 
-[Click on "cheapest" history row — modal opens]
+## Beat 3: Live Routing (45s)
 
-"When the agent says cheapest, the validators reason differently. The LLM weighs cost over carbon and may route to a different zone entirely."
-
-[Close modal. Click on "balanced" row.]
-
-"Balanced gives yet another answer. The point is: this isn't a formula. It's judgment. And that judgment is verified by independent consensus — which is exactly what GenLayer's Optimistic Democracy was built to do."
-
-## Beat 4: What Makes This Real (10s)
-
-[Click "View on Explorer" link — show Bradbury explorer with the tx]
+[Click "Smartest" preset — sliders move to L0 Q10 C0]
 
 VOICEOVER:
-"Every routing decision lives onchain on Bradbury testnet. The zone, the reasoning, the consensus — all verifiable."
+"I want the smartest model, don't care about carbon or latency."
+
+[Type prompt: "Explain why transformer architectures work". Click Route Inference.]
+
+"Five validators on the Bradbury testnet independently evaluate this. The leader picks a node. Each validator checks: is this choice defensible given my priorities?"
+
+[Result appears: US / Claude Sonnet 4, with validator vote circles]
+
+"US, Claude Sonnet 4. All five validators agreed. Quality score 9 out of 10, 45 milliseconds latency."
+
+[Now click "Greenest" preset — sliders move to L0 Q0 C10]
+[Type prompt: "What is the carbon footprint of AI training?". Click Route Inference.]
+
+"Same router, different priorities. Now I want the greenest possible."
+
+[Result appears: FI / DeepSeek V3]
+
+"Finland, DeepSeek V3. 45 grams CO2 — 89% less carbon than Virginia. The router made a completely different decision because the priorities changed. And validators verified both."
+
+## Beat 4: The Consensus (15s)
+
+[Point to the validator vote circles — green checkmarks]
+
+VOICEOVER:
+"Each circle is a validator. Green checkmark means they independently verified the routing choice is defensible. This isn't rubber-stamping JSON structure — they check that the reasoning references the chosen node and the stated priorities."
+
+[Click "View on Explorer" link]
+
+"Every decision is onchain. Verifiable on the Bradbury block explorer."
 
 ## Beat 5: Close (10s)
 
-[Back to frontend. Show GitHub link in header.]
+[Back to frontend, hold on the WindfallRouter header]
 
 VOICEOVER:
-"WindfallRouter. Trustless spatial inference routing. Validators don't rubber-stamp — they re-reason. That's subjective consensus on a real economic problem."
-
-[Hold on the WindfallRouter logo for 2 seconds. End.]
+"WindfallRouter. Three dimensions — latency, quality, carbon. Three nodes. Five validators. One verifiable routing decision. Subjective consensus on a real inference routing problem."
 
 ---
 
 ## Recording Notes
 
-- Use QuickTime screen recording or OBS
-- 1920x1080, no webcam overlay needed
-- Voiceover can be recorded separately and synced
+- QuickTime screen recording or OBS, 1920x1080
+- Voiceover can be recorded separately and synced in iMovie
 - Keep mouse movements slow and deliberate
-- If a routing takes too long (>30s), cut and resume after consensus
+- If routing takes >30s, cut during "Validators reasoning..." spinner and resume when result appears
 - Total target: 1:50–2:00
+- The two live routing demos are the core — make sure both succeed before recording (test first)
