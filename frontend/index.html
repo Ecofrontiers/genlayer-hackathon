@@ -110,49 +110,8 @@ tailwind.config = {
         </button>
       </div>
       <div id="map" class="rounded-lg border border-border overflow-hidden" style="height: 320px;"></div>
-      <div class="grid grid-cols-3 gap-2.5 mt-3">
-        <div id="card-FI" class="bg-white border-2 border-sage/30 rounded-lg p-3 cursor-pointer hover:border-sage transition-colors">
-          <div class="flex items-center justify-between mb-1">
-            <span class="text-sm font-bold text-heading">FI</span>
-            <span class="text-[8px] px-1.5 py-0.5 rounded-full bg-sage/10 text-sage font-medium">greenest</span>
-          </div>
-          <div class="text-[10px] font-mono text-sage font-medium">DeepSeek V3</div>
-          <div class="text-[9px] text-body mt-1">code, math, structured</div>
-          <div class="grid grid-cols-3 gap-1 mt-2 text-center">
-            <div><div class="text-[8px] text-body">carbon</div><div id="carbon-FI" class="text-sm font-mono font-bold text-sage">45</div></div>
-            <div><div class="text-[8px] text-body">latency</div><div class="text-sm font-mono font-bold text-body">145ms</div></div>
-            <div><div class="text-[8px] text-body">quality</div><div class="text-sm font-mono font-bold text-body">7/10</div></div>
-          </div>
-          <div class="hidden"><span id="renewable-FI">82</span></div>
-        </div>
-        <div id="card-DE" class="bg-white border-2 border-border rounded-lg p-3 cursor-pointer hover:border-coral transition-colors">
-          <div class="flex items-center justify-between mb-1">
-            <span class="text-sm font-bold text-heading">DE</span>
-            <span class="text-[8px] px-1.5 py-0.5 rounded-full bg-warm text-body font-medium">balanced</span>
-          </div>
-          <div class="text-[10px] font-mono text-body font-medium">Llama 3.3 70B</div>
-          <div class="text-[9px] text-body mt-1">general, multilingual</div>
-          <div class="grid grid-cols-3 gap-1 mt-2 text-center">
-            <div><div class="text-[8px] text-body">carbon</div><div id="carbon-DE" class="text-sm font-mono font-bold text-coral">302</div></div>
-            <div><div class="text-[8px] text-body">latency</div><div class="text-sm font-mono font-bold text-body">89ms</div></div>
-            <div><div class="text-[8px] text-body">quality</div><div class="text-sm font-mono font-bold text-body">6/10</div></div>
-          </div>
-          <div class="hidden"><span id="renewable-DE">55</span></div>
-        </div>
-        <div id="card-US" class="bg-white border-2 border-border rounded-lg p-3 cursor-pointer hover:border-coral transition-colors">
-          <div class="flex items-center justify-between mb-1">
-            <span class="text-sm font-bold text-heading">US</span>
-            <span class="text-[8px] px-1.5 py-0.5 rounded-full bg-warm text-body font-medium">smartest</span>
-          </div>
-          <div class="text-[10px] font-mono text-body font-medium">Claude Sonnet 4</div>
-          <div class="text-[9px] text-body mt-1">reasoning, analysis, writing</div>
-          <div class="grid grid-cols-3 gap-1 mt-2 text-center">
-            <div><div class="text-[8px] text-body">carbon</div><div id="carbon-US" class="text-sm font-mono font-bold text-coral">420</div></div>
-            <div><div class="text-[8px] text-body">latency</div><div class="text-sm font-mono font-bold text-sage">45ms</div></div>
-            <div><div class="text-[8px] text-body">quality</div><div class="text-sm font-mono font-bold text-sage">9/10</div></div>
-          </div>
-          <div class="hidden"><span id="renewable-US">22</span></div>
-        </div>
+      <div id="node-cards" class="grid grid-cols-3 gap-2.5 mt-3">
+        <div class="bg-warm rounded-lg p-3 text-center text-xs text-body">Loading nodes from contract...</div>
       </div>
     </div>
 
@@ -496,21 +455,38 @@ async function loadNodeData() {
   try {
     const raw = await client.readContract({ address: net().router, functionName: 'get_nodes', args: [] });
     oracleNodes = JSON.parse(raw);
+    const container = document.getElementById('node-cards');
+    const cards = [];
     for (const [id, data] of Object.entries(oracleNodes)) {
-      const cEl = document.getElementById(`carbon-${id}`);
-      if (cEl) cEl.textContent = data.carbon_gco2_kwh || 0;
-      // Update ZONES with oracle data for map/savings calculations
+      const carbon = data.carbon_gco2_kwh || 0;
+      const latency = data.latency_ms || 0;
+      const quality = data.quality_benchmark || 0;
+      // Update ZONES for map/savings
       if (ZONES[id]) {
-        ZONES[id].carbon = data.carbon_gco2_kwh || 0;
+        ZONES[id].carbon = carbon;
         ZONES[id].renewable = data.renewable_pct || 0;
         ZONES[id].model = data.model || '';
-        ZONES[id].latency = data.latency_ms || 0;
-        ZONES[id].quality = data.quality_benchmark || 0;
+        ZONES[id].latency = latency;
+        ZONES[id].quality = quality;
       }
-      const color = (data.carbon_gco2_kwh || 999) < 100 ? '#3A5A3E' : (data.carbon_gco2_kwh || 999) < 250 ? '#E07A5F' : '#C0392B';
+      const color = carbon < 100 ? '#3A5A3E' : carbon < 250 ? '#E07A5F' : '#C0392B';
       if (markers[id]) markers[id].el.style.background = color;
-      if (cEl) { cEl.classList.toggle('text-sage', (data.carbon_gco2_kwh||999) < 100); cEl.classList.toggle('text-coral', (data.carbon_gco2_kwh||999) >= 100); }
+      const carbonColor = carbon < 100 ? 'text-sage' : 'text-coral';
+      const borderColor = carbon < 100 ? 'border-sage/30' : 'border-border';
+      cards.push(`<div class="bg-white border-2 ${borderColor} rounded-lg p-3 cursor-pointer hover:border-sage transition-colors">
+        <div class="flex items-center justify-between mb-1">
+          <span class="text-sm font-bold text-heading">${id}</span>
+        </div>
+        <div class="text-[10px] font-mono ${carbonColor} font-medium">${data.model || '?'}</div>
+        <div class="text-[9px] text-body mt-1">${data.location || ''}</div>
+        <div class="grid grid-cols-3 gap-1 mt-2 text-center">
+          <div><div class="text-[8px] text-body">carbon</div><div class="text-sm font-mono font-bold ${carbonColor}">${carbon}</div></div>
+          <div><div class="text-[8px] text-body">latency</div><div class="text-sm font-mono font-bold text-body">${latency}ms</div></div>
+          <div><div class="text-[8px] text-body">quality</div><div class="text-sm font-mono font-bold text-body">${quality}</div></div>
+        </div>
+      </div>`);
     }
+    if (cards.length) container.innerHTML = cards.join('');
   } catch (e) { console.error('Node data load failed:', e); }
 }
 
