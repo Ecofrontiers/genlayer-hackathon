@@ -333,7 +333,7 @@ const NETWORKS = {
     chain: testnetBradbury,
     name: 'Bradbury Testnet',
     oracle: '0xe417743A5cBFCeC582c39a92F8af72c3C5976915',
-    router: '0x20a1A9cA14564E241c555fd09C0c5A7005259C98',
+    router: '0x719B5Bc4d813786a2f9C42ec3C4f059113784Aa6',
     explorer: 'https://explorer-bradbury.genlayer.com',
     routeFn: 'route_inference',
     routeArgs: (prompt, prefs) => [prompt, prefs],
@@ -477,12 +477,10 @@ async function loadNodeData() {
         <div class="flex items-center justify-between mb-1">
           <span class="text-sm font-bold text-heading">${id}</span>
         </div>
-        <div class="text-[10px] font-mono ${carbonColor} font-medium">${data.model || '?'}</div>
-        <div class="text-[9px] text-body mt-1">${data.location || ''}</div>
-        <div class="grid grid-cols-3 gap-1 mt-2 text-center">
-          <div><div class="text-[8px] text-body">carbon</div><div class="text-sm font-mono font-bold ${carbonColor}">${carbon}</div></div>
-          <div><div class="text-[8px] text-body">latency</div><div class="text-sm font-mono font-bold text-body">${latency}ms</div></div>
-          <div><div class="text-[8px] text-body">quality</div><div class="text-sm font-mono font-bold text-body">${quality}</div></div>
+        <div class="text-[10px] text-body">${data.location || ''}</div>
+        <div class="grid grid-cols-2 gap-1 mt-2 text-center">
+          <div><div class="text-[8px] text-body">carbon</div><div class="text-sm font-mono font-bold ${carbonColor}">${carbon} <span class="text-[8px] font-normal">gCO2</span></div></div>
+          <div><div class="text-[8px] text-body">latency</div><div class="text-sm font-mono font-bold text-body">${latency}<span class="text-[8px] font-normal">ms</span></div></div>
         </div>
       </div>`);
     }
@@ -616,18 +614,18 @@ window.routeInference = async function() {
     const historyRaw = await client.readContract({ address: net().router, functionName: 'get_history', args: [] });
     const history = JSON.parse(historyRaw);
     const latest = history[history.length - 1] || {};
-    const zone = latest.zone || 'FI';
-    const zd = latest.node_data || latest.zone_data || {};
+    const zone = latest.node || latest.zone || 'FI';
+    const zd = latest.node_data || {};
 
     document.getElementById('no-result').classList.add('hidden');
     document.getElementById('result-display').classList.remove('hidden');
     document.getElementById('result-zone').textContent = zone;
     document.getElementById('result-zone-name').textContent = ZONES[zone]?.name || '';
-    document.getElementById('result-model').textContent = latest.model || ZONES[zone]?.model || '';
+    document.getElementById('result-model').textContent = latest.model || '';
     document.getElementById('result-reasoning').textContent = latest.reasoning || 'Consensus reached';
     const z = ZONES[zone] || {};
     document.getElementById('result-carbon').textContent = `${zd.carbon_gco2_kwh || z.carbon || '?'} gCO2`;
-    document.getElementById('result-renewable').textContent = `${zd.latency_ms || z.latency || '?'}ms · quality ${zd.quality_benchmark || z.quality || '?'}`;
+    document.getElementById('result-renewable').textContent = `${zd.latency_ms || z.latency || '?'}ms`;
     showSavings('result', zone);
     // consensus now rendered by renderValidatorVotes
     highlightZone(zone);
@@ -653,7 +651,7 @@ async function loadHistory() {
     tbody.innerHTML = history.map((h, i) => `
       <tr class="border-t border-border hover:bg-warm/50 transition-colors cursor-pointer" onclick="openTxModal(${i})">
         <td class="px-3 py-2 text-xs text-body">${i + 1}</td>
-        <td class="px-3 py-2"><span class="font-bold text-heading">${h.zone || '?'}</span><span class="text-[8px] font-mono text-body ml-1">${h.model || ''}</span></td>
+        <td class="px-3 py-2"><span class="font-bold text-heading">${h.node || h.zone || '?'}</span><span class="text-[8px] font-mono text-body ml-1">${h.model || ''}</span></td>
         <td class="px-3 py-2 text-[9px] font-mono">${h.priorities ? `L${h.priorities.latency} Q${h.priorities.quality || h.priorities.reasoning} C${h.priorities.carbon}` : (h.preferences || '')}</td>
         <td class="px-3 py-2 text-xs text-body">${(h.reasoning || '').substring(0, 80)}${(h.reasoning || '').length > 80 ? '...' : ''}</td>
       </tr>
