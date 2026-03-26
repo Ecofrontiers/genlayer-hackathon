@@ -640,6 +640,9 @@ window.routeInference = async function() {
   loading.classList.add('hidden');
 };
 
+let historyPage = 0;
+const HISTORY_PAGE_SIZE = 5;
+
 async function loadHistory() {
   if (!client || !net().router) return;
   try {
@@ -648,16 +651,42 @@ async function loadHistory() {
     const tbody = document.getElementById('history-body');
     if (!history.length) { tbody.innerHTML = '<tr><td colspan="4" class="px-3 py-8 text-center text-body text-xs opacity-50">No routing decisions yet</td></tr>'; return; }
     window._history = history;
-    tbody.innerHTML = history.map((h, i) => `
-      <tr class="border-t border-border hover:bg-warm/50 transition-colors cursor-pointer" onclick="openTxModal(${i})">
-        <td class="px-3 py-2 text-xs text-body">${i + 1}</td>
-        <td class="px-3 py-2"><span class="font-bold text-heading">${h.node || h.zone || '?'}</span><span class="text-[8px] font-mono text-body ml-1">${h.model || ''}</span></td>
-        <td class="px-3 py-2 text-[9px] font-mono">${h.priorities ? `L${h.priorities.latency} Q${h.priorities.quality || h.priorities.reasoning} C${h.priorities.carbon}` : (h.preferences || '')}</td>
-        <td class="px-3 py-2 text-xs text-body">${(h.reasoning || '').substring(0, 80)}${(h.reasoning || '').length > 80 ? '...' : ''}</td>
-      </tr>
-    `).join('');
+    renderHistoryPage();
   } catch (e) { console.error('History load failed:', e); }
 }
+
+function renderHistoryPage() {
+  const history = window._history || [];
+  const tbody = document.getElementById('history-body');
+  const total = history.length;
+  const totalPages = Math.ceil(total / HISTORY_PAGE_SIZE);
+  historyPage = Math.min(historyPage, totalPages - 1);
+  const start = historyPage * HISTORY_PAGE_SIZE;
+  const page = history.slice(start, start + HISTORY_PAGE_SIZE);
+
+  tbody.innerHTML = page.map((h, i) => {
+    const idx = start + i;
+    return `<tr class="border-t border-border hover:bg-warm/50 transition-colors cursor-pointer" onclick="openTxModal(${idx})">
+      <td class="px-3 py-2 text-xs text-body">${idx + 1}</td>
+      <td class="px-3 py-2"><span class="font-bold text-heading">${h.node || h.zone || '?'}</span><span class="text-[8px] font-mono text-body ml-1">${h.model || ''}</span></td>
+      <td class="px-3 py-2 text-[9px] font-mono">${h.priorities ? `L${h.priorities.latency} Q${h.priorities.quality || h.priorities.reasoning} C${h.priorities.carbon}` : (h.preferences || '')}</td>
+      <td class="px-3 py-2 text-xs text-body">${(h.reasoning || '').substring(0, 80)}${(h.reasoning || '').length > 80 ? '...' : ''}</td>
+    </tr>`;
+  }).join('');
+
+  if (totalPages > 1) {
+    tbody.innerHTML += `<tr><td colspan="4" class="px-3 py-2 text-center">
+      <div class="flex items-center justify-center gap-2">
+        <button onclick="historyPrev()" class="text-[10px] px-2 py-0.5 rounded border border-border text-body hover:border-sage ${historyPage === 0 ? 'opacity-30 cursor-default' : ''}" ${historyPage === 0 ? 'disabled' : ''}>Prev</button>
+        <span class="text-[10px] text-body">${historyPage + 1} / ${totalPages}</span>
+        <button onclick="historyNext()" class="text-[10px] px-2 py-0.5 rounded border border-border text-body hover:border-sage ${historyPage >= totalPages - 1 ? 'opacity-30 cursor-default' : ''}" ${historyPage >= totalPages - 1 ? 'disabled' : ''}>Next</button>
+      </div>
+    </td></tr>`;
+  }
+}
+
+window.historyPrev = function() { if (historyPage > 0) { historyPage--; renderHistoryPage(); } };
+window.historyNext = function() { const total = (window._history || []).length; if ((historyPage + 1) * HISTORY_PAGE_SIZE < total) { historyPage++; renderHistoryPage(); } };
 
 window.openTxModal = function(idx) {
   const h = window._history?.[idx];
