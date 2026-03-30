@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>WindfallRouter — Demo Video Handoff</title>
+<style>
+  @page { size: A4; margin: 2cm; }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Georgia', serif; color: #2A2520; line-height: 1.6; max-width: 720px; margin: 0 auto; padding: 40px 24px; }
+  h1 { font-size: 28px; margin-bottom: 4px; }
+  h2 { font-size: 18px; margin-top: 32px; margin-bottom: 12px; color: #3A5A3E; border-bottom: 1px solid #E3DDD1; padding-bottom: 4px; }
+  h3 { font-size: 14px; margin-top: 20px; margin-bottom: 8px; color: #5C5347; }
+  p, li { font-size: 13px; color: #5C5347; }
+  p { margin-bottom: 10px; }
+  ul, ol { margin-left: 20px; margin-bottom: 12px; }
+  li { margin-bottom: 4px; }
+  code { font-family: 'SF Mono', 'Fira Code', monospace; font-size: 12px; background: #F0EBE1; padding: 1px 5px; border-radius: 3px; }
+  .url { font-family: 'SF Mono', monospace; font-size: 12px; color: #3A5A3E; }
+  .subtitle { font-size: 14px; color: #5C5347; margin-bottom: 24px; }
+  .meta { font-size: 11px; color: #999; margin-bottom: 32px; }
+  table { width: 100%; border-collapse: collapse; margin: 12px 0; font-size: 12px; }
+  th, td { text-align: left; padding: 6px 10px; border-bottom: 1px solid #E3DDD1; }
+  th { font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; color: #3A5A3E; background: #FDFBF7; }
+  .beat { background: #FDFBF7; border: 1px solid #E3DDD1; border-radius: 8px; padding: 16px; margin: 12px 0; page-break-inside: avoid; }
+  .beat-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+  .beat-num { font-size: 11px; font-weight: bold; color: #3A5A3E; text-transform: uppercase; letter-spacing: 1px; }
+  .beat-time { font-size: 11px; color: #999; }
+  .action { font-size: 12px; color: #E07A5F; font-style: italic; margin: 6px 0; }
+  .voiceover { font-size: 13px; color: #2A2520; margin: 6px 0; padding-left: 12px; border-left: 3px solid #3A5A3E; }
+  .warning { background: #FFF3E0; border: 1px solid #E07A5F; border-radius: 6px; padding: 12px; margin: 12px 0; font-size: 12px; }
+  .tip { background: #E8F5E9; border: 1px solid #3A5A3E; border-radius: 6px; padding: 12px; margin: 12px 0; font-size: 12px; }
+  .checklist { list-style: none; margin-left: 0; }
+  .checklist li::before { content: "\2610  "; }
+  hr { border: none; border-top: 1px solid #E3DDD1; margin: 24px 0; }
+  .page-break { page-break-before: always; }
+</style>
+</head>
+<body>
+
+<h1>WindfallRouter</h1>
+<div class="subtitle">Demo Video Recording Guide &amp; Handoff Package</div>
+<div class="meta">GenLayer Bradbury Hackathon &mdash; Deadline Apr 3, 2026 &bull; Judging Apr 3&ndash;10 &bull; Demo Day Apr 10<br>Prepared Mar 30, 2026 for Louise Borreani</div>
+
+<h2>What This Is</h2>
+
+<p>WindfallRouter demonstrates that <strong>inference routing is the first real-world subjective decision that needs onchain consensus</strong> &mdash; and GenLayer is the only chain that can do it.</p>
+
+<p>When an AI gateway routes a query, it balances latency, model quality, and carbon impact. No formula resolves this tradeoff &mdash; it's inherently subjective. Today, one server decides and you trust its word. WindfallRouter puts that decision to 5 validators who independently reason about whether the choice is <em>defensible</em>.</p>
+
+<p>The demo should make GenLayer the hero. The judges should walk away thinking "inference routing is a killer app for our platform."</p>
+
+<h3>Track</h3>
+<p><strong>Bradbury Special &mdash; Subjective Consensus.</strong></p>
+
+<h2>Links</h2>
+
+<table>
+  <tr><th>What</th><th>URL</th></tr>
+  <tr><td>Frontend (live)</td><td class="url">https://frontend-ecofrontiers.vercel.app</td></tr>
+  <tr><td>Block Explorer</td><td class="url">https://explorer-bradbury.genlayer.com</td></tr>
+  <tr><td>GitHub Repo</td><td class="url">https://github.com/Ecofrontiers/genlayer-hackathon</td></tr>
+</table>
+
+<h2>The Three Nodes</h2>
+
+<table>
+  <tr><th>Node</th><th>Location</th><th>Carbon</th><th>Latency</th><th>Grid Source</th></tr>
+  <tr><td><strong>FI</strong></td><td>Helsinki, Finland</td><td style="color:#3A5A3E;">45 gCO2/kWh</td><td>145ms</td><td>Fingrid</td></tr>
+  <tr><td><strong>DE</strong></td><td>Nuremberg, Germany</td><td style="color:#E07A5F;">302 gCO2/kWh</td><td>89ms</td><td>SMARD</td></tr>
+  <tr><td><strong>US</strong></td><td>Ashburn, Virginia</td><td style="color:#C0392B;">420 gCO2/kWh</td><td>45ms</td><td>PJM</td></tr>
+</table>
+
+<h2>Key Talking Points</h2>
+
+<div class="tip">
+<strong>The narrative frame:</strong> Inference routing is the first real-world subjective decision that needs onchain consensus &mdash; and GenLayer is the only chain that can do it. But we go further: the verification layer has the same carbon problem as the inference layer, and we're the only team with the energy data to solve both.
+</div>
+
+<ul>
+  <li><strong>Defensible, not identical.</strong> Validators don't need to pick the same node. They check whether the leader's reasoning is coherent. Different LLMs, different reasoning paths, same conclusion &mdash; that's Optimistic Democracy working.</li>
+  <li><strong>The hard case is the interesting case.</strong> "Smartest" obviously routes to the best model. "Greenest" obviously routes to the cleanest node. "Balanced" &mdash; that's where the subjectivity lives, where validators might reason differently, and where GenLayer does real work.</li>
+  <li><strong>The verification paradox.</strong> Proving inference was green costs 5 more LLM calls (validators). Nobody tracks the carbon of consensus. GenLayer is the only chain where this matters (no other chain runs LLM inference for validation), and we have the energy data to measure it.</li>
+</ul>
+
+<hr>
+
+<div class="page-break"></div>
+
+<h2>Video Script &mdash; 2 Minutes</h2>
+
+<div class="warning">
+  <strong>Before recording:</strong> Do 2&ndash;3 test routings first to confirm the testnet is responsive. If routing takes &gt;30 seconds, cut during the spinner and resume when the result appears. Pre-load the History tab so it has entries.
+</div>
+
+<h3>Setup Checklist</h3>
+<ul class="checklist">
+  <li>Open <code>frontend-ecofrontiers.vercel.app</code> &mdash; green "Bradbury Testnet" badge visible top-right</li>
+  <li>Open <code>explorer-bradbury.genlayer.com</code> in another tab</li>
+  <li>QuickTime or OBS, 1920&times;1080</li>
+  <li>Do a test routing to confirm it works</li>
+  <li>Check History tab has 3+ entries</li>
+  <li>Hide bookmarks bar (Cmd+Shift+B)</li>
+</ul>
+
+<div class="beat">
+  <div class="beat-header">
+    <span class="beat-num">Beat 1 &mdash; The Problem</span>
+    <span class="beat-time">~10 seconds</span>
+  </div>
+  <div class="action">[Screen: WindfallRouter frontend. Briefly show the three node cards.]</div>
+  <div class="voiceover">"AI inference routing is a subjective decision. Fast or green? Quality or cheap? There's no formula. Today, one server decides and you trust its word. WindfallRouter puts that decision to a jury."</div>
+</div>
+
+<div class="beat">
+  <div class="beat-header">
+    <span class="beat-num">Beat 2 &mdash; The Hard Case</span>
+    <span class="beat-time">~35 seconds</span>
+  </div>
+  <div class="action">[Click the "Balanced" preset. Sliders move to Latency 5, Quality 5, Carbon 5.]</div>
+  <div class="voiceover">"Three nodes. Finland is the greenest. Virginia is the fastest and smartest. Germany is in between. I set all three priorities equal &mdash; latency, quality, carbon. There's no right answer here. This is the genuinely subjective call."</div>
+  <div class="action">[Type in prompt box: "Compare the environmental cost of training GPT-4 versus fine-tuning an open model"<br>Click "Route Inference". Wait for result.]</div>
+  <div class="voiceover">"Five validators on GenLayer's Bradbury testnet independently reason about this. The leader proposes a routing decision. Each validator checks: is this choice defensible given the priorities?"</div>
+  <div class="action">[Result appears with validator vote circles.]</div>
+  <div class="voiceover">"The validators might use different LLMs. They might reason differently about the tradeoffs. But they converge on whether the leader's answer is defensible &mdash; not whether it's the only possible answer. That's subjective consensus."</div>
+</div>
+
+<div class="beat">
+  <div class="beat-header">
+    <span class="beat-num">Beat 3 &mdash; The Easy Case</span>
+    <span class="beat-time">~20 seconds</span>
+  </div>
+  <div class="action">[Click the "Greenest" preset. Sliders move to Latency 0, Quality 0, Carbon 10.]</div>
+  <div class="action">[Type: "What is the carbon footprint of AI inference?"<br>Click "Route Inference". Wait for result.]</div>
+  <div class="voiceover">"Now compare: carbon is the only priority. Finland, 45 grams CO2 &mdash; ten times cleaner than Virginia. When the answer is obvious, consensus is trivial. When it's subjective, Optimistic Democracy does real work. That's the whole point."</div>
+</div>
+
+<div class="beat">
+  <div class="beat-header">
+    <span class="beat-num">Beat 4 &mdash; Onchain Verification</span>
+    <span class="beat-time">~15 seconds</span>
+  </div>
+  <div class="action">[Point to validator vote circles. Then click "View on Explorer".]</div>
+  <div class="voiceover">"Every routing decision is onchain. The validator votes, the reasoning, the chosen node &mdash; all verifiable on the Bradbury block explorer. No trust required."</div>
+</div>
+
+<div class="beat">
+  <div class="beat-header">
+    <span class="beat-num">Beat 5 &mdash; Who Watches the Watchmen</span>
+    <span class="beat-time">~25 seconds</span>
+  </div>
+  <div class="action">[Switch back to the frontend. Hold on the map showing the three nodes.]</div>
+  <div class="voiceover">"But here's what nobody's asking. Every GenLayer transaction runs five LLM inference calls &mdash; one per validator. That's five times the compute of the original request. As GenLayer scales to thousands of validators, the carbon footprint of consensus itself becomes a real problem."</div>
+  <div class="voiceover">"WindfallRouter's energy data doesn't just route inference &mdash; it can route verification. Carbon-aware validator selection. End-to-end carbon transparency, from the query to the consensus that verified it. That's what we're building next on GenLayer."</div>
+</div>
+
+<hr>
+
+<h2>Recording Tips</h2>
+
+<ul>
+  <li><strong>Total target:</strong> 1:40 &ndash; 2:00</li>
+  <li><strong>Pacing:</strong> Beat 2 (the hard case) is the centerpiece. Take your time there. Beat 5 (ecosystem) should feel like you're opening a door, not rushing to close.</li>
+  <li><strong>Mouse:</strong> Move slowly and deliberately. Hover on things you're talking about.</li>
+  <li><strong>Voiceover:</strong> Record separately and sync in iMovie, or record live. Either works.</li>
+  <li><strong>If routing takes &gt;30s:</strong> Cut during the "Validators reasoning..." spinner. Resume when result appears.</li>
+  <li><strong>If a routing fails:</strong> Try again. Testnet can be flaky. Two successful routings is all we need.</li>
+  <li><strong>Resolution:</strong> 1920&times;1080. Chrome, clean tab bar.</li>
+</ul>
+
+<h2>Troubleshooting</h2>
+
+<table>
+  <tr><th>Problem</th><th>Fix</th></tr>
+  <tr><td>Node cards show "Loading..."</td><td>Refresh. Check green "Bradbury Testnet" badge is visible.</td></tr>
+  <tr><td>"Route Inference" hangs</td><td>Testnet congestion. Wait 2 min, try again. Shorter prompt may help.</td></tr>
+  <tr><td>Validator circles are red</td><td>Consensus failure &mdash; normal on testnet. Route again.</td></tr>
+  <tr><td>"View on Explorer" broken</td><td>Explorer may be slow to index. Give it 30s.</td></tr>
+  <tr><td>Wrong network</td><td>Dropdown top-right &rarr; "Bradbury Testnet"</td></tr>
+</table>
+
+<div class="page-break"></div>
+
+<h2>Ecosystem Extensions (for judges / Q&amp;A)</h2>
+
+<p>If asked "where does this go?" &mdash; the core thesis is <strong>the verification layer has the same carbon problem as the inference layer</strong>, and we have the data infrastructure to solve both.</p>
+
+<h3>The Verification Paradox</h3>
+
+<p>Proving your inference was green requires 5 validator LLM calls. Each validator is a machine on some grid, consuming energy that nobody tracks. As GenLayer scales from 5 to 1,000 validators, the carbon footprint of consensus becomes significant. No other chain has this problem because no other chain runs LLM inference as part of consensus.</p>
+
+<table>
+  <tr><th>Extension</th><th>What It Means</th><th>Why It's Credible</th></tr>
+  <tr><td><strong>Carbon-tagged validators</strong></td><td>Each GenLayer validator reports its grid zone. GridOracle extends to cover validator locations, not just inference nodes.</td><td>GridOracle already deployed with zone-level carbon data. Same infrastructure, new consumer.</td></tr>
+  <tr><td><strong>Carbon cost of consensus</strong></td><td>Every WindfallRouter transaction reports two numbers: carbon of the routed inference AND carbon of the 5 validators who verified it. End-to-end transparency.</td><td>We already calculate per-request energy cost for inference nodes. Apply same math to validators.</td></tr>
+  <tr><td><strong>Green validator preference</strong></td><td>When GenLayer selects validators for a transaction, weight toward validators on cleaner grids. Greener verification without sacrificing consensus quality.</td><td>Research contribution to GenLayer's validator selection protocol. Requires their buy-in but the data layer is ready.</td></tr>
+  <tr><td><strong>Agent routing marketplace</strong></td><td>Agents post inference routing requests as transactions. Other agents bid. Consensus verifies defensibility. Carbon cost of the full chain (routing + verification) is visible.</td><td>Natural extension as multi-agent inference grows. Already built the routing contract &mdash; marketplace is the coordination layer on top.</td></tr>
+</table>
+
+<div class="tip">
+<strong>Key line for judges:</strong> "No other chain runs LLM inference for consensus. That makes GenLayer the only chain where the carbon footprint of verification is measurable &mdash; and we're the only team with the energy data to measure it."
+</div>
+
+<h2>Submission Details</h2>
+
+<table>
+  <tr><th>Field</th><th>Value</th></tr>
+  <tr><td>Hackathon</td><td>GenLayer Bradbury Hackathon</td></tr>
+  <tr><td>Track</td><td>Bradbury Special &mdash; Subjective Consensus</td></tr>
+  <tr><td>Deadline</td><td>Apr 3, 2026</td></tr>
+  <tr><td>Judging</td><td>Apr 3&ndash;10, 2026</td></tr>
+  <tr><td>Demo Day</td><td>Apr 10, 2026</td></tr>
+  <tr><td>Team</td><td>Pat Rawson &amp; Louise Borreani &mdash; Ecofrontiers SARL</td></tr>
+  <tr><td>Contracts</td><td>GridOracle + SpatialRouterSimple (Python, deployed on Bradbury)</td></tr>
+  <tr><td>License</td><td>MIT</td></tr>
+</table>
+
+<hr>
+<p style="font-size: 11px; color: #999; text-align: center; margin-top: 32px;">Ecofrontiers SARL &bull; ecofrontiers.xyz &bull; Mar 2026</p>
+
+</body>
+</html>

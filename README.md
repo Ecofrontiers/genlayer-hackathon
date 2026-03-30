@@ -118,9 +118,9 @@ This project demonstrates subjective consensus on a real economic problem. Infer
 
 ## Team
 
-**Pat Rawson** — [Ecofrontiers SARL](https://ecofrontiers.xyz) (France)
+**Pat Rawson** — Co-founder & CEO, [Ecofrontiers SARL](https://ecofrontiers.xyz)
 
-Built [Windfall](https://windfall.ecofrontiers.xyz), a live spatial inference gateway on Base. Topocurrencies research on geospatially-modified crypto protocols.
+**Louise Borreani** — Co-founder & Head of Research, [Ecofrontiers SARL](https://ecofrontiers.xyz)
 
 ## License
 

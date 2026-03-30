@@ -9,3 +9,4 @@ ref/
 artifacts/
 frontend/config.js
 package-lock.json
+genlayer-private/
