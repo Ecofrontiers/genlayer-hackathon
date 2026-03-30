@@ -21,7 +21,7 @@ VOICEOVER:
 [Point to the 3 node cards: FI/DeepSeek, DE/Llama, US/Claude]
 
 VOICEOVER:
-"Three inference nodes. Finland runs DeepSeek — cheapest, greenest at 45 grams CO2, but highest latency. Germany runs Llama — balanced. Virginia runs Claude Sonnet — fastest, smartest, but dirtiest at 420 grams CO2."
+"Three inference nodes with real energy data from national grid operators. Finland — greenest at 45 grams CO2, fed by Fingrid. Germany — balanced, fed by SMARD. Virginia — fastest and smartest, but dirtiest at 420 grams CO2."
 
 ## Beat 3: Live Routing (45s)
 
@@ -63,7 +63,7 @@ VOICEOVER:
 [Back to frontend, hold on the WindfallRouter header]
 
 VOICEOVER:
-"WindfallRouter. Three dimensions — latency, quality, carbon. Three nodes. Five validators. One verifiable routing decision. Subjective consensus on a real inference routing problem."
+"WindfallRouter. Real energy data from national grid operators. Five validators verify the routing decision is defensible. Subjective consensus on a real inference routing problem."
 
 ---
 

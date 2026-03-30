@@ -73,9 +73,9 @@ async function main() {
   // Step 2: Seed zone data
   console.log('\nSeeding zones...');
   const zones = [
-    ['FI', 45, 82],
-    ['DE', 302, 55],
-    ['US', 420, 22],
+    ['FI', 45, 82],   // Fingrid data — Helsinki
+    ['DE', 302, 55],   // SMARD data — Nuremberg
+    ['US', 420, 22],   // PJM data — Ashburn, Virginia
   ];
   for (const [zone, carbon, renewable] of zones) {
     await callWrite(oracleAddr, 'update_zone_hardcoded', [zone, carbon, renewable], `Seed ${zone}`);

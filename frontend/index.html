@@ -348,9 +348,9 @@ let client, map, markers = {};
 let lastTxHash = null;
 
 const ZONES = {
-  FI: { name: 'Helsinki, Finland', lng: 24.94, lat: 60.17, color: '#3A5A3E' },
-  DE: { name: 'Nuremberg, Germany', lng: 11.08, lat: 49.45, color: '#E07A5F' },
-  US: { name: 'Ashburn, Virginia', lng: -77.49, lat: 39.04, color: '#C0392B' },
+  FI: { name: 'Helsinki, Finland', lng: 24.94, lat: 60.17, color: '#3A5A3E', infra: 'Hetzner VPS → OpenRouter (inceptron)', gridSource: 'Fingrid' },
+  DE: { name: 'Nuremberg, Germany', lng: 11.08, lat: 49.45, color: '#E07A5F', infra: 'Hetzner VPS → OpenRouter (nebius)', gridSource: 'SMARD' },
+  US: { name: 'Ashburn, Virginia', lng: -77.49, lat: 39.04, color: '#C0392B', infra: 'Hetzner VPS → OpenRouter (US providers)', gridSource: 'PJM' },
 };
 
 // Node data from oracle — populated at runtime
@@ -414,7 +414,7 @@ function initMap() {
     const marker = new mapboxgl.Marker({ element: el })
       .setLngLat([zone.lng, zone.lat])
       .setPopup(new mapboxgl.Popup({ offset: 10, closeButton: false })
-        .setHTML(`<div style="font-size:11px;"><b>${id}</b> — ${zone.name}<br><span id="popup-${id}">${zone.carbon} gCO2 · ${zone.renewable}% renewable</span></div>`))
+        .setHTML(`<div style="font-size:11px;"><b>${id}</b> — ${zone.name}<br><span style="font-size:9px;color:#888;">${zone.infra || ''}</span><br><span id="popup-${id}">${zone.carbon || '?'} gCO2 · ${zone.renewable || '?'}% renewable</span></div>`))
       .addTo(map);
     markers[id] = { marker, el };
   }
@@ -461,23 +461,37 @@ async function loadNodeData() {
       const carbon = data.carbon_gco2_kwh || 0;
       const latency = data.latency_ms || 0;
       const quality = data.quality_benchmark || 0;
-      // Update ZONES for map/savings
+      // Update ZONES for map/savings — oracle data overrides defaults, but keep infra from ZONES
       if (ZONES[id]) {
         ZONES[id].carbon = carbon;
         ZONES[id].renewable = data.renewable_pct || 0;
         ZONES[id].model = data.model || '';
         ZONES[id].latency = latency;
         ZONES[id].quality = quality;
+        if (data.infra) ZONES[id].infra = data.infra;
+        if (data.verified !== undefined) ZONES[id].verified = data.verified;
       }
+      // Fall back to ZONES infra if oracle doesn't have it
+      if (!data.infra && ZONES[id]?.infra) data.infra = ZONES[id].infra;
+      if (data.verified === undefined && ZONES[id]) data.verified = false; // all nodes currently proxy through OpenRouter
       const color = carbon < 100 ? '#3A5A3E' : carbon < 250 ? '#E07A5F' : '#C0392B';
       if (markers[id]) markers[id].el.style.background = color;
       const carbonColor = carbon < 100 ? 'text-sage' : 'text-coral';
       const borderColor = carbon < 100 ? 'border-sage/30' : 'border-border';
+      const infra = data.infra || '';
+      const verified = data.verified === true || data.verified === 'true';
+      const verifiedBadge = verified
+        ? '<span class="inline-block px-1 py-0.5 bg-sage/10 text-sage text-[7px] font-bold rounded">VERIFIED</span>'
+        : '<span class="inline-block px-1 py-0.5 bg-warm text-body text-[7px] rounded">PROXY</span>';
+      const modelName = data.model || '';
       cards.push(`<div class="bg-white border-2 ${borderColor} rounded-lg p-3 cursor-pointer hover:border-sage transition-colors">
         <div class="flex items-center justify-between mb-1">
           <span class="text-sm font-bold text-heading">${id}</span>
+          ${verifiedBadge}
         </div>
         <div class="text-[10px] text-body">${data.location || ''}</div>
+        ${infra ? `<div class="text-[8px] text-body/60 mt-0.5">${infra}</div>` : ''}
+        ${modelName ? `<div class="text-[8px] font-mono text-sage mt-0.5">${modelName}</div>` : ''}
         <div class="grid grid-cols-2 gap-1 mt-2 text-center">
           <div><div class="text-[8px] text-body">carbon</div><div class="text-sm font-mono font-bold ${carbonColor}">${carbon} <span class="text-[8px] font-normal">gCO2</span></div></div>
           <div><div class="text-[8px] text-body">latency</div><div class="text-sm font-mono font-bold text-body">${latency}<span class="text-[8px] font-normal">ms</span></div></div>

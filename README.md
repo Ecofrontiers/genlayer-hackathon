@@ -25,11 +25,11 @@ SpatialRouter (Intelligent Contract)
 
 ### Three Nodes, Three Tradeoffs
 
-| Node | Model | Quality | Latency | Carbon |
-|------|-------|---------|---------|--------|
-| **FI** Helsinki | DeepSeek V3 | 7/10 | 145ms | 45 gCO2/kWh |
-| **DE** Nuremberg | Llama 3.3 70B | 6/10 | 89ms | 302 gCO2/kWh |
-| **US** Ashburn, VA | Claude Sonnet 4 | 9/10 | 45ms | 420 gCO2/kWh |
+| Node | Infrastructure | Models Available | Latency | Carbon |
+|------|---------------|-----------------|---------|--------|
+| **FI** Helsinki | Hetzner VPS → OpenRouter (inceptron) | DeepSeek V3, Llama 3.3 70B | 145ms | 45 gCO2/kWh |
+| **DE** Nuremberg | Hetzner VPS → OpenRouter (nebius) | DeepSeek V3, Llama 3.3 70B | 89ms | 302 gCO2/kWh |
+| **US** Ashburn | Hetzner VPS → OpenRouter (US providers) | Claude Sonnet 4, Llama 3.3 70B | 45ms | 420 gCO2/kWh |
 
 Agents set three priority sliders (0-10 each): **latency**, **quality**, **carbon**. The router weighs these against node capabilities and selects the best fit. Different priority configs produce different routing decisions — all verified by consensus.
 
@@ -82,6 +82,20 @@ pytest tests/ -v
 open frontend/index.html
 ```
 
+## Production Infrastructure
+
+WindfallRouter is the onchain verification layer for [Windfall](https://windfall.ecofrontiers.xyz), a live inference gateway. Energy data comes from real national grid operators via the TinyFish scraping pipeline.
+
+### Energy Data Sources
+
+| Node | Grid Source | Data | Update Frequency |
+|------|-----------|------|-----------------|
+| **FI** Helsinki | Fingrid (Finnish TSO) | Generation mix, price, CO2 factor | Every 5 min |
+| **DE** Nuremberg | SMARD (Bundesnetzagentur) | Generation mix, price | Every 5 min |
+| **US** Ashburn | PJM Interconnection | Generation mix, LMP prices | Every 5 min |
+
+All three nodes currently route inference through Hetzner VPS instances proxying to OpenRouter. The GridOracle contract pulls DE carbon data live from the Energy-Charts API. Provider datacenter locations are mapped in Windfall's spatial router — verified where possible, flagged as unverified where not.
+
 ## What We Learned
 
 1. **Structural validation is not consensus.** Checking `"zone" in data` means the validator is rubber-stamping the leader. Real subjective consensus requires the validator to independently verify the reasoning is coherent.
@@ -91,6 +105,10 @@ open frontend/index.html
 3. **Validator LLM re-reasoning times out on testnet.** Calling `exec_prompt` inside the validator function causes 80% consensus failure on Bradbury due to timeouts. Semantic validation (checking reasoning references the chosen node and priorities) is reliable and still meaningful.
 
 4. **The routing question produces genuinely different answers.** Same contract, same nodes, different priority sliders → different routing decisions. "Smartest" routes to US/Claude. "Greenest" routes to FI/DeepSeek. "Balanced" is the subjective call where validators might disagree.
+
+5. **Cosmetic routing is worse than no routing.** If the GPU runs in an unknown datacenter while you claim "routed to Helsinki," you're attesting something false. Windfall tracks which OpenRouter providers have verified datacenter locations and flags unverified ones honestly. GenLayer consensus adds another layer — if the leader claims FI is greenest but oracle data says otherwise, validators reject it.
+
+6. **Flat pricing hides the tradeoff.** Charging a fixed rate per request regardless of node means users don't see the cost of their routing choice. Cost-plus percentage pricing makes the economic tradeoff between fast/expensive and green/cheap visible and real.
 
 ## Track
 

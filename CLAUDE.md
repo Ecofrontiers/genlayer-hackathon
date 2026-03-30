@@ -56,3 +56,24 @@ Hackathon project for GenLayer Bradbury Hackathon (Mar 20 - Apr 3, 2026).
 ## Key Differentiator for Us
 
 GenLayer validators do MODEL ROUTING — choosing which LLM to use per contract. This is literally what Windfall does (spatial model routing). The validator layer IS an inference routing problem.
+
+## Production Infrastructure
+
+WindfallRouter connects to real Windfall infrastructure:
+
+- **Live energy data:** TinyFish scraping pipeline feeds SMARD (DE), Fingrid (FI), PJM (US) every 5 min
+- **Provider verification:** Windfall maps OpenRouter providers to datacenter grid zones. Verified where known, flagged as unverified where not.
+- **All 3 nodes** currently route through Hetzner VPS → OpenRouter. GridOracle pulls DE carbon live from Energy-Charts API.
+
+### Node data mapping (Windfall → GenLayer)
+
+| Windfall field | GridOracle field | Source |
+|---------------|-----------------|--------|
+| `carbonIntensity` | `carbon_gco2_kwh` | TinyFish scraper → energy-oracle.ts |
+| `renewablePercent` | `renewable_pct` | TinyFish scraper → energy-oracle.ts |
+| `pricePerKwh` | (not yet in oracle) | TinyFish scraper → energy-oracle.ts |
+| `providerVerified` | (not yet in oracle) | spatial-router.ts provider map |
+
+### Planned: Lambda GPU self-hosting
+
+Lambda Cloud integration planned for TinyFish accelerator (separate from this hackathon). When live, the US node would switch from OpenRouter proxy to self-hosted vLLM with verified location. See `~/Desktop/1_projects/tinyfish/LAMBDA-BUILD-PLAN.md`.
