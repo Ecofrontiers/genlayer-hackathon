@@ -2,6 +2,18 @@
 from genlayer import *
 import json
 
+def parse_result(raw):
+    """Handle both dict (response_format='json') and str (raw text) from exec_prompt."""
+    if isinstance(raw, dict):
+        return raw
+    s = raw.strip() if isinstance(raw, str) else str(raw).strip()
+    # Strip markdown fences if present
+    if s.startswith("```"):
+        lines = s.split("\n")
+        lines = [l for l in lines if not l.strip().startswith("```")]
+        s = "\n".join(lines).strip()
+    return json.loads(s)
+
 class SpatialRouterSimple(gl.Contract):
     node_registry: TreeMap[str, str]
     node_id_list: str
@@ -43,13 +55,13 @@ class SpatialRouterSimple(gl.Contract):
         priorities_str = "latency=" + str(latency_p) + "/10, quality=" + str(quality_p) + "/10, carbon=" + str(carbon_p) + "/10"
 
         def leader_fn():
-            return gl.nondet.exec_prompt("You are an inference router. Pick a node AND a model for this task.\n\nNODES (each can run any model):\n" + nodes_compact + "\n\nAVAILABLE MODELS (runnable on any node):\n- DeepSeek V3: MMLU 87.1, best for code/math\n- Llama 3.3 70B: MMLU 82.0, general purpose\n- Claude Sonnet 4: MMLU 88.7, best reasoning/analysis\n\nAgent priorities: " + priorities_str + "\nTask: \"" + prompt[:200] + "\"\n\nPick the best node (for latency/carbon) and best model (for quality/task fit). Reply JSON: {\"node\":\"XX\",\"model\":\"name\",\"reasoning\":\"one sentence\"}")
+            return gl.nondet.exec_prompt("You are an inference router. Pick a node AND a model for this task.\n\nNODES (each can run any model):\n" + nodes_compact + "\n\nAVAILABLE MODELS (runnable on any node):\n- DeepSeek V3: MMLU 87.1, best for code/math\n- Llama 3.3 70B: MMLU 82.0, general purpose\n- Claude Sonnet 4: MMLU 88.7, best reasoning/analysis\n\nAgent priorities: " + priorities_str + "\nTask: \"" + prompt[:200] + "\"\n\nPick the best node (for latency/carbon) and best model (for quality/task fit). Reply ONLY valid JSON, no markdown: {\"node\":\"XX\",\"model\":\"name\",\"reasoning\":\"one sentence\"}", response_format="json")
 
         def validator_fn(leader_result) -> bool:
             if not isinstance(leader_result, gl.vm.Return):
                 return False
             try:
-                data = json.loads(leader_result.calldata)
+                data = parse_result(leader_result.calldata)
                 if "node" not in data or "reasoning" not in data:
                     return False
                 if data["node"] not in nodes:
@@ -59,7 +71,7 @@ class SpatialRouterSimple(gl.Contract):
             except Exception:
                 return False
 
-        routing = json.loads(gl.vm.run_nondet_unsafe(leader_fn, validator_fn))
+        routing = parse_result(gl.vm.run_nondet_unsafe(leader_fn, validator_fn))
         chosen_node = routing.get("node", node_ids[0])
         routing["priorities"] = {"latency": latency_p, "quality": quality_p, "carbon": carbon_p}
         routing["node_data"] = nodes.get(chosen_node, {})

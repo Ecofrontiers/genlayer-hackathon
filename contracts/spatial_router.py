@@ -3,6 +3,17 @@ from genlayer import *
 import json
 
 
+def parse_result(raw):
+    """Handle both dict (response_format='json') and str (raw text) from exec_prompt."""
+    if isinstance(raw, dict):
+        return raw
+    s = raw.strip() if isinstance(raw, str) else str(raw).strip()
+    if s.startswith("```"):
+        lines = s.split("\n")
+        lines = [l for l in lines if not l.strip().startswith("```")]
+        s = "\n".join(lines).strip()
+    return json.loads(s)
+
 class SpatialRouter(gl.Contract):
     """Full inference router with cross-contract oracle reads.
     Owner-gated. Sanitized inputs. Genuine validator re-reasoning.
@@ -58,7 +69,8 @@ And this agent's preferences: "{safe_prefs}"
 
 Select the best node. Consider quality_benchmark, latency_ms, carbon_gco2_kwh, and the agent's priorities.
 
-Respond ONLY with valid JSON: {{"zone": "XX", "model": "name", "reasoning": "one sentence"}}"""
+Respond ONLY with valid JSON, no markdown: {{"zone": "XX", "model": "name", "reasoning": "one sentence"}}""",
+                response_format="json"
             )
             return result
 
@@ -66,7 +78,7 @@ Respond ONLY with valid JSON: {{"zone": "XX", "model": "name", "reasoning": "one
             if not isinstance(leader_result, gl.vm.Return):
                 return False
             try:
-                data = json.loads(leader_result.calldata)
+                data = parse_result(leader_result.calldata)
                 if "zone" not in data or "reasoning" not in data:
                     return False
                 if data["zone"] not in valid_zones:
@@ -89,7 +101,7 @@ Is this defensible? Reply ONLY "YES" or "NO" then one sentence."""
                 return False
 
         routing_result = gl.vm.run_nondet_unsafe(routing_leader, routing_validator)
-        routing = json.loads(routing_result)
+        routing = parse_result(routing_result)
         chosen_zone = routing.get("zone", list(valid_zones)[0])
         reasoning = routing.get("reasoning", "Selected based on preferences")
 
