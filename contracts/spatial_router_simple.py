@@ -55,7 +55,7 @@ class SpatialRouterSimple(gl.Contract):
         priorities_str = "latency=" + str(latency_p) + "/10, quality=" + str(quality_p) + "/10, carbon=" + str(carbon_p) + "/10"
 
         def leader_fn():
-            return gl.nondet.exec_prompt("You are an inference router. Pick a node AND a model for this task.\n\nNODES (each can run any model):\n" + nodes_compact + "\n\nAVAILABLE MODELS (runnable on any node):\n- DeepSeek V3: MMLU 87.1, best for code/math\n- Llama 3.3 70B: MMLU 82.0, general purpose\n- Claude Sonnet 4: MMLU 88.7, best reasoning/analysis\n\nAgent priorities: " + priorities_str + "\nTask: \"" + prompt[:200] + "\"\n\nPick the best node (for latency/carbon) and best model (for quality/task fit). Reply ONLY valid JSON, no markdown: {\"node\":\"XX\",\"model\":\"name\",\"reasoning\":\"one sentence\"}", response_format="json")
+            return gl.nondet.exec_prompt("Pick node+model.\nNodes: " + nodes_compact + "\nModels: DeepSeek V3 (code/math), Llama 70B (general), Claude Sonnet 4 (reasoning)\nPriorities: " + priorities_str + "\nReply JSON: {\"node\":\"XX\",\"model\":\"name\",\"reasoning\":\"why\"}", response_format="json")
 
         def validator_fn(leader_result) -> bool:
             if not isinstance(leader_result, gl.vm.Return):
